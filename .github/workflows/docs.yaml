@@ -1,0 +1,33 @@
+name: Docs
+
+# Builds the markdown site in docs/ with nebula-md (https://github.com/thanoslabs/nebula-md)
+# and deploys it to GitHub Pages. Pages deploys only run for public repositories.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yaml"
+  workflow_dispatch:
+
+# Only one Pages deployment at a time; let an in-flight deploy finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    # Private repos skip publishing (GitHub Pages on private repos needs a paid plan
+    # and would expose internal docs publicly on free plans).
+    if: ${{ !github.event.repository.private }}
+    # TODO(project): pin to a commit SHA or tag once nebula-md publishes releases.
+    uses: thanoslabs/nebula-md/.github/workflows/deploy.yml@main
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    with:
+      vault_repo: ${{ github.repository }}
+      vault_directory: docs/
+      output_directory: output/
+      site_name: ${{ github.event.repository.name }}
