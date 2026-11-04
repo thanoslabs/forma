@@ -11,6 +11,11 @@ describe("simulation",()=>{
   for(let i=0;i<100;i++)state=tickSimulation(state);
   expect(state.tasks.find(t=>t.id==="design")?.status).toBe("done");
  });
+ it("generates new work after the initial queue is exhausted",()=>{
+  let state=initialSimulation();
+  for(let i=0;i<110;i++)state=tickSimulation(state);
+  expect(state.events.some(e=>e.message.startsWith("New simulated work arrived"))).toBe(true);
+ });
  it("does not progress while paused",()=>{
   const state={...initialSimulation(),running:false};expect(tickSimulation(state)).toBe(state);
  });
