@@ -59,7 +59,7 @@ function App() {
   const sendChat=(body:string,mentions:LinkedMention[])=>{
     const id=nextMessageId.current++;
     setMessages(old=>[...old,{id,author:"You",speakerId:"player",body,mentions,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]);
-    showBubble({id:"chat-"+id,messageId:String(id),speakerId:"player",speakerName:"You",body,position:{...playerPosition.current}});
+    showBubble({id:"chat-"+id,messageId:String(id),speakerId:"player",speakerName:"You",body,mentions,position:{...playerPosition.current}});
   };
   const openChatMessage=(messageId:string)=>{
     setFocusedMessageId(messageId);
