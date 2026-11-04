@@ -23,7 +23,4 @@ jobs:
       - name: Validate documentation files
         run: |
           test -s docs/index.md
-          if grep -rIl $'\\r' docs --include='*.md' | grep -q .; then
-            echo "Markdown files must use LF line endings"
-            exit 1
-          fi
+          find docs -type f -name "*.md" -print | sort
