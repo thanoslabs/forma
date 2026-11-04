@@ -62,6 +62,8 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId }: Offi
      actor.label.position.set(actor.position.x, actor.position.y + 47);
      actor.label.text = a.name + " · " + a.status;
      actor.node.alpha = live.current.selectedId === a.id ? 1 : 0.93;
+     actor.node.scale.set(a.status === "working" ? 1 + Math.sin(app.ticker.lastTime / 260) * 0.025 : 1);
+     actor.label.style.fill = a.status === "working" ? "#275c50" : a.status === "blocked" ? "#a04640" : "#28384a";
     }
     for (const [id, actor] of actors) if (!incoming.some(a => a.id === id)) { actor.node.destroy(); actor.label.destroy(); actors.delete(id); }
    });
