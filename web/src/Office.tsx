@@ -13,9 +13,9 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number };
-export type OfficeProps = { agents?: OfficeAgent[]; onSelect?: (id: string) => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
+export type OfficeProps = { hideActorArt?: boolean; agents?: OfficeAgent[]; onSelect?: (id: string) => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPositions = desks }: OfficeProps) {
+export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPositions = desks, hideActorArt = false }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
  const live = useRef({ agents, onSelect, onMove, selectedId, deskPositions });
  live.current = { agents, onSelect, onMove, selectedId, deskPositions };
@@ -65,7 +65,7 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPo
      actor.node.position.set(actor.position.x, actor.position.y);
      actor.label.position.set(actor.position.x, actor.position.y + 47);
      actor.label.text = a.name + " · " + a.status;
-     actor.node.alpha = live.current.selectedId === a.id ? 1 : 0.93;
+     actor.node.alpha = hideActorArt ? 0.001 : (live.current.selectedId === a.id ? 1 : 0.93);
      actor.node.scale.set(a.status === "working" ? 1 + Math.sin(app.ticker.lastTime / 260) * 0.025 : 1);
      actor.label.style.fill = a.status === "working" ? "#275c50" : a.status === "blocked" ? "#a04640" : "#28384a";
     }
