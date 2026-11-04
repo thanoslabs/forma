@@ -1,0 +1,54 @@
+name: Forma CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: forma
+          POSTGRES_PASSWORD: forma_dev_only
+          POSTGRES_DB: forma
+        ports: ["55434:5432"]
+        options: >-
+          --health-cmd "pg_isready -U forma -d forma"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Verify Go modules and tests
+        run: |
+          go mod download
+          go test ./...
+          go vet ./...
+          test -z "$(gofmt -l cmd)"
+      - name: Check database migrations
+        env:
+          DATABASE_URL: postgres://forma:forma_dev_only@localhost:55434/forma?sslmode=disable
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+          make migrate-up
+          make migrate-up
+          psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('workspaces','connections','activity_events')" | grep -qx 3
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
