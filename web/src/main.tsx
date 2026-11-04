@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import "./office.css";
+import "./demo.css";
 import { Office } from "./Office";
 import { DemoData } from "./DemoData";
 
