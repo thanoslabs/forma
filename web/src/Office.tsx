@@ -7,6 +7,15 @@ export const bounds = { left: 72, right: 788, top: 95, bottom: 423 };
 export function clampPosition(p: Position): Position {
  return { x: Math.max(bounds.left, Math.min(bounds.right, p.x)), y: Math.max(bounds.top, Math.min(bounds.bottom, p.y)) };
 }
+export function avoidFurniture(p: Position, furniture: Position[]): Position {
+ const point = clampPosition(p);
+ for (const d of furniture) {
+  if (Math.abs(point.x - d.x) < 78 && point.y > d.y - 47 && point.y < d.y + 62) {
+   return { x: point.x, y: point.y < d.y + 7 ? d.y - 48 : d.y + 63 };
+  }
+ }
+ return point;
+}
 export function walkToward(current: Position, target: Position, distance: number): Position {
  const dx = target.x - current.x, dy = target.y - current.y, length = Math.hypot(dx, dy);
  if (length === 0 || length <= distance) return target;
@@ -34,7 +43,7 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPo
    room.eventMode = "static";
    room.cursor = "crosshair";
    room.on("pointertap", e => {
-    const point = clampPosition(e.getLocalPosition(app.stage));
+    const point = avoidFurniture(e.getLocalPosition(app.stage), live.current.deskPositions);
     const id = activeId ?? live.current.selectedId ?? live.current.agents[0]?.id;
     if (id) { const actor = actors.get(id); if (actor) actor.target = point; live.current.onMove?.(id, point); }
    });
