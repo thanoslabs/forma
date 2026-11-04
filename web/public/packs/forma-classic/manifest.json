@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "forma-classic",
+  "version": "0.1.0",
+  "engineVersion": "1",
+  "name": "Forma Classic",
+  "rooms": [
+    {
+      "id": "main-office",
+      "width": 860,
+      "height": 490,
+      "spawn": { "x": 430, "y": 355 },
+      "workstations": [
+        { "id": "desk-1", "x": 220, "y": 205 },
+        { "id": "desk-2", "x": 430, "y": 205 },
+        { "id": "desk-3", "x": 640, "y": 205 }
+      ]
+    }
+  ]
+}
