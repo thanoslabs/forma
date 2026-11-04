@@ -3,17 +3,16 @@ import { activeMention, insertMention, mentionOptions, resolveMentions, type Lin
 import type { SimAgent } from "./simulation";
 import "./chat.css";
 
-export type ChatMessage={id:number;body:string;mentions:LinkedMention[];author:"You"|"Forma";time:string};
+export type ChatMessage={id:number;body:string;mentions:LinkedMention[];author:string;time:string;speakerId?:string};
 const projects:MentionTarget[]=[
  {kind:"project",id:"forma",name:"Forma"},
  {kind:"project",id:"office-redesign",name:"Office Redesign"},
  {kind:"project",id:"agent-automation",name:"Agent Automation"}
 ];
-export function ChatPanel({agents}:{agents:SimAgent[]}) {
+export function ChatPanel({agents,messages,onSend,focusedMessageId}:{agents:SimAgent[];messages:ChatMessage[];onSend:(body:string,mentions:LinkedMention[])=>void;focusedMessageId?:string}) {
  const targets=useMemo<MentionTarget[]>(()=>[...agents.map(a=>({kind:"agent" as const,id:a.id,name:a.name})),...projects],[agents]);
- const [messages,setMessages]=useState<ChatMessage[]>([{id:0,author:"Forma",body:"Welcome to the office! Mention an agent or project to link it in a message. This is a local demo; messages are not sent to real agents.",mentions:[],time:""}]);
  const [draft,setDraft]=useState(""),[caret,setCaret]=useState(0),[choice,setChoice]=useState(0);
- const input=useRef<HTMLTextAreaElement>(null),nextId=useRef(1);
+ const input=useRef<HTMLTextAreaElement>(null);
  const match=activeMention(draft,caret),options=match?mentionOptions(match,targets):[];
  const select=(target:MentionTarget)=>{
   if(!match)return;
@@ -25,7 +24,7 @@ export function ChatPanel({agents}:{agents:SimAgent[]}) {
  const send=()=>{
   const body=draft.trim();if(!body)return;
   const mentions=resolveMentions(body,targets);
-  setMessages(previous=>[...previous,{id:nextId.current++,author:"You",body,mentions,time:new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}]);
+  onSend(body,mentions);
   setDraft("");setCaret(0);setChoice(0);
  };
  const renderMessage=(message:ChatMessage)=>{
@@ -40,7 +39,7 @@ export function ChatPanel({agents}:{agents:SimAgent[]}) {
  };
  return <section className="chat-panel" aria-label="Office chat">
   <div className="chat-heading"><div><h3>Office chat</h3><p>Demo conversation · mention agents and projects with @</p></div><span className="chat-demo">LOCAL DEMO</span></div>
-  <div className="chat-messages" role="log" aria-live="polite">{messages.map(m=><article key={m.id} className={"chat-message "+(m.author==="You"?"mine":"")}>
+  <div className="chat-messages" role="log" aria-live="polite">{messages.map(m=><article key={m.id} id={"chat-message-"+m.id} className={"chat-message "+(m.author==="You"?"mine":"")+(focusedMessageId===String(m.id)?" focused":"")}>
    <div className="chat-message-meta"><strong>{m.author}</strong><small>{m.time}</small></div><p>{renderMessage(m)}</p>
   </article>)}</div>
   <div className="chat-compose">
