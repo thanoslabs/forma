@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { OfficeAgent } from "./Office";
+import type { PlayerState } from "./playerMovement";
 
 /** All dimensions are in world units. Characters are original procedural 3D geometry. */
 export type CharacterStyle = "agent" | "explorer";
@@ -95,8 +96,8 @@ export function motionForAgent(agent:OfficeAgent, moving:boolean):CharacterMotio
 }
 
 /** Transparent Three.js layer aligned with the 860×490 Pixi office. Pointer events remain with Pixi. */
-export function OfficeCharacters({agents}:{agents:OfficeAgent[]}) {
- const host=useRef<HTMLDivElement>(null), latest=useRef(agents);latest.current=agents;
+export function OfficeCharacters({agents,playerState}:{agents:OfficeAgent[];playerState:PlayerState}) {
+ const host=useRef<HTMLDivElement>(null), latest=useRef({agents,playerState});latest.current={agents,playerState};
  useEffect(()=>{
   const el=host.current;if(!el)return;
   const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-8.6,8.6,4.9,-4.9,0.1,100);
@@ -111,9 +112,9 @@ export function OfficeCharacters({agents}:{agents:OfficeAgent[]}) {
   const clock=new THREE.Clock();let frame=0;
   const animate=()=>{
    frame=requestAnimationFrame(animate);
-   const t=clock.getElapsedTime(),ids=new Set(latest.current.map(a=>a.id));
+   const t=clock.getElapsedTime(),ids=new Set(latest.current.agents.map(a=>a.id));
    for(const [id,entry] of models)if(!ids.has(id)){scene.remove(entry.puppet.root);models.delete(id);}
-   for(const agent of latest.current){
+   for(const agent of latest.current.agents){
     let entry=models.get(agent.id);
     if(!entry){const puppet=createCharacter("agent",agent.color??0x9271d6);scene.add(puppet.root);entry={puppet,x:agent.position.x,y:agent.position.y,initialized:true};models.set(agent.id,entry);}
     const dx=agent.position.x-entry.x,dy=agent.position.y-entry.y;
@@ -125,10 +126,13 @@ export function OfficeCharacters({agents}:{agents:OfficeAgent[]}) {
     entry.puppet.root.scale.setScalar(0.46);
     poseCharacter(entry.puppet,motionForAgent(agent,moving),t);
    }
-   poseCharacter(player,"idle",t);
+   const ps=latest.current.playerState;
+   player.root.position.set((ps.position.x-430)/50,(245-ps.position.y)/50-0.55,0);
+   player.root.rotation.y=ps.facing;
+   poseCharacter(player,ps.moving?"walk":"idle",t);
    renderer.render(scene,camera);
   };animate();
-  return()=>{cancelAnimationFrame(frame);models.forEach(({puppet})=>{puppet.root.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(v=>v.dispose());else m.dispose();}});});renderer.dispose();renderer.domElement.remove();};
+  return()=>{cancelAnimationFrame(frame);[...Array.from(models.values()).map(v=>v.puppet),player].forEach(puppet=>{puppet.root.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(v=>v.dispose());else m.dispose();}});});renderer.dispose();renderer.domElement.remove();};
  },[]);
  return <div ref={host} className="office-characters" aria-hidden="true"/>;
 }
