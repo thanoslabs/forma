@@ -2,7 +2,9 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import "./office.css";
+import "./demo.css";
 import { Office } from "./Office";
+import { DemoData } from "./DemoData";
 
 const sections = [
   { name: "Office", description: "The living workspace will appear here once the world renderer is connected." },
@@ -20,9 +22,7 @@ function App() {
     </aside>
     <main><header><span>Workspace / {sections[selected].name}</span><span className="status">● Setup required</span></header>
       <section className="content"><p className="eyebrow">WELCOME TO FORMA</p><h2>{sections[selected].name}</h2>
-      <p>{sections[selected].description}</p>{selected === 0 ? <Office /> : <div className="placeholder" role="img" aria-label="Empty office placeholder">
-      <div className="room"><span>✳</span><strong>Your workspace starts here</strong><small>Connect an agent harness and project provider to bring it to life.</small></div>
-      </div>}</section>
+      <p>{sections[selected].description}</p>{selected === 0 ? <Office /> : <DemoData kind={selected === 1 ? "agents" : "projects"} /> }</section>
     </main>
   </div>;
 }

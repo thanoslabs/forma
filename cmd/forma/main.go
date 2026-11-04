@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/thanoslabs/forma/internal/httpapi"
 )
 
 func main() {
@@ -30,6 +31,9 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
+		httpapi.NewMockAPI().Register(mux)
+	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 	 w.Header().Set("Content-Type", "application/json")
 	 _ = json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
