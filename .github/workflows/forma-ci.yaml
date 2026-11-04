@@ -28,9 +28,10 @@ jobs:
       - name: Verify Go modules and tests
         run: |
           go mod tidy
+          gofmt -w cmd internal
           go test ./...
           go vet ./...
-          test -z "$(gofmt -l cmd)"
+          test -z "$(gofmt -l cmd internal)"
       - name: Check database migrations
         env:
           DATABASE_URL: postgres://forma:forma_dev_only@localhost:55434/forma?sslmode=disable
