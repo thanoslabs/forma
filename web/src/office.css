@@ -1,1 +1,6 @@
 .office-canvas{margin-top:32px;max-width:100%;overflow:hidden;border:1px solid #3b4854;border-radius:18px;background:#c4e5ed}.office-canvas canvas{display:block;max-width:100%;height:auto;margin:auto}
+
+.office-3d-stack { position: relative; width: min(100%, 860px); }
+.office-3d-stack .office-canvas { width: 100%; }
+.office-characters { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.office-characters canvas { display: block; }
