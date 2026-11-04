@@ -46,6 +46,11 @@ export function tickSimulation(state:SimState):SimState {
    }
   }
  }
+ if(next.tick % 8 === 1){
+  const task=next.tasks.find(t=>t.status==="queued");
+  const available=next.agents.find(a=>a.status==="idle"||a.status==="completed");
+  if(task&&available)next=assignTask(next,task.id,available.id);
+ }
  return next;
 }
 export function setSimulationSpeed(state:SimState,speed:number):SimState{return {...state,speed:Math.max(0.25,Math.min(4,speed))};}
