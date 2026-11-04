@@ -69,7 +69,7 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPo
       actor = { node, label, position: { ...a.position }, target: { ...a.position }, source: { ...a.position } };
       actors.set(a.id, actor);
      }
-     if (actor.source.x !== a.position.x || actor.source.y !== a.position.y) { actor.target = avoidFurniture(a.position, live.current.deskPositions); actor.source = { ...a.position }; }
+     if (actor.source.x !== a.position.x || actor.source.y !== a.position.y) { actor.target = clampPosition(a.position); actor.source = { ...a.position }; }
      actor.position = walkToward(actor.position, actor.target, Math.min(12, 2.5 * ticker.deltaTime));
      actor.node.position.set(actor.position.x, actor.position.y);
      actor.label.position.set(actor.position.x, actor.position.y + 47);
