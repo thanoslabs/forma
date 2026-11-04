@@ -1,6 +1,10 @@
 import type { Position } from "./Office";
 import type { LinkedMention } from "./mentions";
 export type SpeechBubble = { id:string; speakerId:string; speakerName:string; body:string; mentions?:LinkedMention[]; position:Position; messageId:string };
+export function speakerPosition(bubble:SpeechBubble,player:Position,agents:ReadonlyArray<{id:string;position:Position}>):Position {
+ if(bubble.speakerId==="player")return player;
+ return agents.find(agent=>agent.id===bubble.speakerId)?.position??bubble.position;
+}
 export const SPEECH_LIMIT=120;
 export function speechPreview(body:string):string {
  const chars=Array.from(body);
