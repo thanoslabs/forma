@@ -27,7 +27,7 @@ jobs:
           cache: false
       - name: Verify Go modules and tests
         run: |
-          go mod download
+          go mod tidy
           go test ./...
           go vet ./...
           test -z "$(gofmt -l cmd)"
