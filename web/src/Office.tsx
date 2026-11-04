@@ -13,12 +13,12 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number };
-export type OfficeProps = { agents?: OfficeAgent[]; onSelect?: (id: string) => void; onMove?: (id: string, position: Position) => void; selectedId?: string };
+export type OfficeProps = { agents?: OfficeAgent[]; onSelect?: (id: string) => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, onSelect, onMove, selectedId }: OfficeProps) {
+export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPositions = desks }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
- const live = useRef({ agents, onSelect, onMove, selectedId });
- live.current = { agents, onSelect, onMove, selectedId };
+ const live = useRef({ agents, onSelect, onMove, selectedId, deskPositions });
+ live.current = { agents, onSelect, onMove, selectedId, deskPositions };
  useEffect(() => {
   const element = host.current;
   if (!element) return;
@@ -40,8 +40,12 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId }: Offi
    });
    app.stage.addChild(room);
    app.stage.addChild(new Graphics().ellipse(430, 310, 290, 115).fill("#a9c8a6"));
-   for (const d of desks) app.stage.addChild(new Graphics().roundRect(d.x - 65, d.y, 130, 50, 12).fill("#9b684e").roundRect(d.x - 35, d.y - 35, 70, 48, 6).fill("#3d5664"));
+   const furniture = new Container(); app.stage.addChild(furniture);
+   let deskKey = "";
+   const drawFurniture = (positions: Position[]) => { furniture.removeChildren().forEach(child => child.destroy()); for (const d of positions) furniture.addChild(new Graphics().roundRect(d.x - 65, d.y, 130, 50, 12).fill("#9b684e").roundRect(d.x - 35, d.y - 35, 70, 48, 6).fill("#3d5664")); };
+   drawFurniture(live.current.deskPositions);
    app.ticker.add(ticker => {
+    const key = JSON.stringify(live.current.deskPositions); if (key !== deskKey) { deskKey = key; drawFurniture(live.current.deskPositions); }
     const incoming = live.current.agents;
     for (const a of incoming) {
      let actor = actors.get(a.id);
@@ -62,6 +66,8 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId }: Offi
      actor.label.position.set(actor.position.x, actor.position.y + 47);
      actor.label.text = a.name + " · " + a.status;
      actor.node.alpha = live.current.selectedId === a.id ? 1 : 0.93;
+     actor.node.scale.set(a.status === "working" ? 1 + Math.sin(app.ticker.lastTime / 260) * 0.025 : 1);
+     actor.label.style.fill = a.status === "working" ? "#275c50" : a.status === "blocked" ? "#a04640" : "#28384a";
     }
     for (const [id, actor] of actors) if (!incoming.some(a => a.id === id)) { actor.node.destroy(); actor.label.destroy(); actors.delete(id); }
    });
