@@ -46,6 +46,12 @@ export function tickSimulation(state:SimState):SimState {
    }
   }
  }
+ if(next.tick % 45 === 0 && !next.tasks.some(t=>t.status==="queued")) {
+  const titles=["Review the design system","Investigate a test failure","Prepare a release","Refactor a component","Write documentation"];
+  const task:SimTask={id:"cycle-"+next.tick,title:titles[Math.floor(next.tick/45)%titles.length],status:"queued"};
+  next={...next,tasks:[...next.tasks.filter(t=>t.status!=="done").slice(-15),task]};
+  next=addEvent(next,"New simulated work arrived: "+task.title);
+ }
  if(next.tick % 8 === 1){
   const task=next.tasks.find(t=>t.status==="queued");
   const available=next.agents.find(a=>a.status==="idle"||a.status==="completed");
