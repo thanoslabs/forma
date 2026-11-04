@@ -8,6 +8,7 @@ import { DemoData } from "./DemoData";
 import { useSimulation } from "./useSimulation";
 import { OfficePanels } from "./OfficePanels";
 import "./panels.css";
+import "./layout.css";
 import { LayoutEditor } from "./LayoutEditor";
 import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
 
