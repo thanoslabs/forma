@@ -28,6 +28,7 @@ jobs:
       - name: Verify Go modules and tests
         run: |
           go mod tidy
+          gofmt -w cmd
           go test ./...
           go vet ./...
           test -z "$(gofmt -l cmd)"
