@@ -107,6 +107,7 @@ export function OfficeCharacters({agents}:{agents:OfficeAgent[]}) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(860,490);
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.domElement.style.width="100%";renderer.domElement.style.height="100%";el.appendChild(renderer.domElement);
   const models=new Map<string,{puppet:Puppet,x:number,y:number,initialized:boolean}>();
+  const player=createCharacter("explorer");scene.add(player.root);player.root.scale.setScalar(0.46);player.root.position.set(-6.4,-3.4,0);
   const clock=new THREE.Clock();let frame=0;
   const animate=()=>{
    frame=requestAnimationFrame(animate);
@@ -124,6 +125,7 @@ export function OfficeCharacters({agents}:{agents:OfficeAgent[]}) {
     entry.puppet.root.scale.setScalar(0.46);
     poseCharacter(entry.puppet,motionForAgent(agent,moving),t);
    }
+   poseCharacter(player,"idle",t);
    renderer.render(scene,camera);
   };animate();
   return()=>{cancelAnimationFrame(frame);models.forEach(({puppet})=>{puppet.root.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(v=>v.dispose());else m.dispose();}});});renderer.dispose();renderer.domElement.remove();};
