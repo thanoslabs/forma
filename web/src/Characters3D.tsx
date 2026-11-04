@@ -80,7 +80,7 @@ export function createCharacter(style: CharacterStyle, accent = 0x9271d6): Puppe
 export function poseCharacter(p:Puppet, motion:CharacterMotion, time:number) {
  const walk=motion==="walk",work=motion==="work",sit=motion==="sit",wave=motion==="wave";
  const phase=time*7;
- p.root.position.y=walk?Math.abs(Math.sin(phase))*0.07:Math.sin(time*2)*0.012;
+ p.head.position.y=1.32+(walk?Math.abs(Math.sin(phase))*0.07:Math.sin(time*2)*0.012);
  p.leftLeg.rotation.x=walk?Math.sin(phase)*0.55:sit?-1.15:0;
  p.rightLeg.rotation.x=walk?-Math.sin(phase)*0.55:sit?-1.15:0;
  p.leftArm.rotation.x=walk?-Math.sin(phase)*0.55:work?-0.65+Math.sin(phase)*0.13:0;
