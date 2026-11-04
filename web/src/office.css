@@ -2,5 +2,6 @@
 
 .office-3d-stack { position: relative; width: min(100%, 860px); }
 .office-3d-stack .office-canvas { width: 100%; }
-.office-characters { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.office-characters { position: absolute; inset: 33px 0 0; pointer-events: none; overflow: hidden; }
 .office-characters canvas { display: block; }
+\n.player-hint { font-size: 0.88rem; margin: 14px 0 0; opacity: 0.82; }\n.player-hint kbd { display:inline-block; padding:2px 5px; margin:0 2px; border:1px solid currentColor; border-radius:4px; font:inherit; font-size:0.8rem; }\n
