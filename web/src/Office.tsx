@@ -24,7 +24,7 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId }: Offi
   if (!element) return;
   const app = new Application();
   let disposed = false;
-  const actors = new Map<string, { node: Container; label: Text; position: Position; target: Position }>();
+  const actors = new Map<string, { node: Container; label: Text; position: Position; target: Position; source: Position }>();
   let activeId: string | undefined;
   const init = async () => {
    await app.init({ width: 860, height: 490, background: "#c4e5ed", antialias: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
@@ -53,10 +53,10 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId }: Offi
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
       label.anchor.set(0.5);
       app.stage.addChild(node, label);
-      actor = { node, label, position: { ...a.position }, target: { ...a.position } };
+      actor = { node, label, position: { ...a.position }, target: { ...a.position }, source: { ...a.position } };
       actors.set(a.id, actor);
      }
-     actor.target = clampPosition(a.position);
+     if (actor.source.x !== a.position.x || actor.source.y !== a.position.y) { actor.target = clampPosition(a.position); actor.source = { ...a.position }; }
      actor.position = walkToward(actor.position, actor.target, Math.min(12, 2.5 * ticker.deltaTime));
      actor.node.position.set(actor.position.x, actor.position.y);
      actor.label.position.set(actor.position.x, actor.position.y + 47);
