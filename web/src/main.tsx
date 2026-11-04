@@ -37,7 +37,6 @@ function App() {
   const nextMessageId=React.useRef(1),seenEvent=React.useRef(0);
   const playerPosition=React.useRef(playerState.position);
   playerPosition.current=playerState.position;
-  const agentsRef=React.useRef(state.agents);agentsRef.current=state.agents;
   const timers=React.useRef(new Map<string,ReturnType<typeof setTimeout>>());
   const showBubble=React.useCallback((bubble:SpeechBubble)=>{
     setBubbles(old=>[...old.filter(b=>b.speakerId!==bubble.speakerId),bubble]);
