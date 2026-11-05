@@ -13,12 +13,12 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number };
-export type OfficeProps = { hideActorArt?: boolean; agents?: OfficeAgent[]; onSelect?: (id: string) => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
+export type OfficeProps = { hideActorArt?: boolean; agents?: OfficeAgent[]; onSelect?: (id: string) => void; onDeselect?: () => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPositions = desks, hideActorArt = false }: OfficeProps) {
+export function Office({ agents = fallback, onSelect, onDeselect, onMove, selectedId, deskPositions = desks, hideActorArt = false }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
- const live = useRef({ agents, onSelect, onMove, selectedId, deskPositions });
- live.current = { agents, onSelect, onMove, selectedId, deskPositions };
+ const live = useRef({ agents, onSelect, onDeselect, onMove, selectedId, deskPositions });
+ live.current = { agents, onSelect, onDeselect, onMove, selectedId, deskPositions };
  useEffect(() => {
   const element = host.current;
   if (!element) return;
@@ -53,7 +53,7 @@ export function Office({ agents = fallback, onSelect, onMove, selectedId, deskPo
       const node = new Container();
       node.addChild(new Graphics().ellipse(0, 0, 26, 32).fill(a.color ?? 0x7e70cf).ellipse(-9, -8, 4, 6).fill(0xffffff).ellipse(9, -8, 4, 6).fill(0xffffff).ellipse(-9, -8, 2, 3).fill(0x25384d).ellipse(9, -8, 2, 3).fill(0x25384d).ellipse(0, 5, 13, 7).fill(0xe5ba67));
       node.eventMode = "static"; node.cursor = "pointer";
-      node.on("pointertap", e => { e.stopPropagation(); activeId = a.id; live.current.onSelect?.(a.id); });
+      node.on("pointertap", e => { e.stopPropagation(); live.current.onSelect?.(a.id); });
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
       label.anchor.set(0.5);
       app.stage.addChild(node, label);
