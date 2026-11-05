@@ -3,13 +3,13 @@ import { activeMention, insertMention, mentionOptions, resolveMentions, type Lin
 import type { SimAgent } from "./simulation";
 import "./chat.css";
 
-export type ChatMessage={id:number;body:string;mentions:LinkedMention[];author:string;time:string;speakerId?:string};
+export type ChatMessage={id:string;body:string;mentions:LinkedMention[];author:string;time:string;speakerId?:string};
 const projects:MentionTarget[]=[
  {kind:"project",id:"forma",name:"Forma"},
  {kind:"project",id:"office-redesign",name:"Office Redesign"},
  {kind:"project",id:"agent-automation",name:"Agent Automation"}
 ];
-export function ChatPanel({agents,messages,onSend,focusedMessageId}:{agents:SimAgent[];messages:ChatMessage[];onSend:(body:string,mentions:LinkedMention[])=>void;focusedMessageId?:string}) {
+export function ChatPanel({agents,messages,onSend,focusedMessageId,status,error}:{agents:SimAgent[];messages:ChatMessage[];onSend:(body:string,mentions:LinkedMention[])=>void;focusedMessageId?:string;status:"connecting"|"connected"|"sending"|"local";error?:string}) {
  const targets=useMemo<MentionTarget[]>(()=>[...agents.map(a=>({kind:"agent" as const,id:a.id,name:a.name})),...projects],[agents]);
  const [draft,setDraft]=useState(""),[caret,setCaret]=useState(0),[choice,setChoice]=useState(0);
  const input=useRef<HTMLTextAreaElement>(null);
@@ -38,7 +38,8 @@ export function ChatPanel({agents,messages,onSend,focusedMessageId}:{agents:SimA
   parts.push(message.body.slice(offset));return parts;
  };
  return <section className="chat-panel" aria-label="Office chat">
-  <div className="chat-heading"><div><h3>Office chat</h3><p>Demo conversation · mention agents and projects with @</p></div><span className="chat-demo">LOCAL DEMO</span></div>
+  <div className="chat-heading"><div><h3>Office chat</h3><p>Demo conversation · mention agents and projects with @</p></div><span className="chat-demo">{status==="connected"?"MOCK AGENT":status==="sending"?"SENDING":status==="connecting"?"CONNECTING":"LOCAL FALLBACK"}</span></div>
+  {error&&<p role="status" className="chat-error">{error}</p>}
   <div className="chat-messages" role="log" aria-live="polite">{messages.map(m=><article key={m.id} id={"chat-message-"+m.id} className={"chat-message "+(m.author==="You"?"mine":"")+(focusedMessageId===String(m.id)?" focused":"")}>
    <div className="chat-message-meta"><strong>{m.author}</strong><small>{m.time}</small></div><p>{renderMessage(m)}</p>
   </article>)}</div>
@@ -51,7 +52,7 @@ export function ChatPanel({agents,messages,onSend,focusedMessageId}:{agents:SimA
     else if(options.length&&(e.key==="Enter"||e.key==="Tab")){e.preventDefault();select(options[choice]??options[0]);}
     else if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}
    }}/>
-   <div className="chat-actions"><small>Enter to send · Shift+Enter for newline · @agent:name / @project:name</small><button type="button" disabled={!draft.trim()} onClick={send}>Send</button></div>
+   <div className="chat-actions"><small>Enter to send · Shift+Enter for newline · @agent:name / @project:name</small><button type="button" disabled={!draft.trim()||status==="sending"} onClick={send}>Send</button></div>
   </div>
  </section>;
 }
