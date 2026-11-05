@@ -18,7 +18,7 @@ const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status:
 export function Office({ agents = fallback, onSelect, onDeselect, onMove, selectedId, deskPositions = desks, hideActorArt = false }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
  const live = useRef({ agents, onSelect, onDeselect, onMove, selectedId, deskPositions });
- live.current = { agents, onSelect, onMove, selectedId, deskPositions };
+ live.current = { agents, onSelect, onDeselect, onMove, selectedId, deskPositions };
  useEffect(() => {
   const element = host.current;
   if (!element) return;
