@@ -26,6 +26,8 @@ jobs:
           go-version-file: go.mod
           cache: false
       - name: Verify Go modules and tests
+        env:
+          DATABASE_URL: postgres://forma:forma_dev_only@localhost:55434/forma?sslmode=disable
         run: |
           go mod tidy
           gofmt -w cmd internal

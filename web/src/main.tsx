@@ -17,7 +17,7 @@ import "./layout.css";
 import "./immersive.css";
 import { LayoutEditor } from "./LayoutEditor";
 import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
-import { listConversationMessages, sendConversationMessage, type ConversationMessage } from "./conversationApi";
+import { ensureDefaultConversation, listConversationMessages, sendConversationMessage, watchConversationMessages, type ConversationMessage, type ConversationScope } from "./conversationApi";
 
 type WorkspacePanel = "chat" | "agents" | "projects" | "activity" | "settings" | null;
 
@@ -28,7 +28,8 @@ function App() {
   const [layout,setLayout] = React.useState(loadLayout);
   const playerState=usePlayerMovement(layout.desks,panel===null);
   React.useEffect(()=>saveLayout(layout),[layout]);
-  const [messages,setMessages]=React.useState<ChatMessage[]>([{id:"welcome",author:"Forma",body:"Welcome to the office. Mention Atlas, Nova, or Pixel to send a message through the mock agent harness.",mentions:[],time:""}]);
+  const [messages,setMessages]=React.useState<ChatMessage[]>([{id:"welcome",author:"Forma",body:"Welcome to the shared office conversation. Messages are persisted when the Forma service is connected.",mentions:[],time:""}]);
+  const [conversationScope,setConversationScope]=React.useState<ConversationScope>();
   const [chatStatus,setChatStatus]=React.useState<"connecting"|"connected"|"sending"|"local">("connecting");
   const [chatError,setChatError]=React.useState<string>();
   const [bubbles,setBubbles]=React.useState<SpeechBubble[]>([]);
@@ -44,27 +45,25 @@ function App() {
   React.useEffect(()=>()=>{timers.current.forEach(clearTimeout);timers.current.clear();},[]);
   const toChatMessage=React.useCallback((message:ConversationMessage):ChatMessage=>({id:message.id,author:message.author.name,speakerId:message.author.kind==="agent"?message.author.id:"player",body:message.body,mentions:message.mentions,time:new Date(message.occurredAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}),[]);
   React.useEffect(()=>{
-    const controller=new AbortController();
-    void listConversationMessages(controller.signal).then(found=>{
-      if(found.length)setMessages(found.map(toChatMessage));
-      setChatStatus("connected");setChatError(undefined);
-    }).catch(()=>{if(!controller.signal.aborted){setChatStatus("local");setChatError("The demo API is unavailable. Messages will stay in this browser session.");}});
-    return()=>controller.abort();
+    const controller=new AbortController();let active=true;let stopWatching:undefined|(()=>void);
+    const upsert=(message:ConversationMessage)=>setMessages(old=>[...old.filter(existing=>existing.id!==message.id),toChatMessage(message)]);
+    void ensureDefaultConversation(controller.signal).then(async scope=>{
+      const found=await listConversationMessages(scope,controller.signal);if(!active)return;
+      setConversationScope(scope);if(found.length)setMessages(found.map(toChatMessage));setChatStatus("connected");setChatError(undefined);
+      stopWatching=watchConversationMessages(scope,upsert,()=>{if(active)setChatError("Live updates disconnected. Persisted messages can still be sent.");});
+    }).catch(()=>{if(active&&!controller.signal.aborted){setChatStatus("local");setChatError("The Forma API is unavailable. Messages will stay in this browser session.");}});
+    return()=>{active=false;controller.abort();stopWatching?.();};
   },[toChatMessage]);
   const sendChat=(body:string,mentions:LinkedMention[])=>{
     const requestId=globalThis.crypto?.randomUUID?.()??"request-"+Date.now();
-    if(chatStatus==="local"){
+    if(chatStatus==="local"||!conversationScope){
       const message:ChatMessage={id:"local-"+requestId,author:"You",speakerId:"player",body,mentions,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})};
       setMessages(old=>[...old,message]);showBubble({id:"chat-"+message.id,messageId:message.id,speakerId:"player",speakerName:"You",body,mentions,position:{...playerPosition.current}});return;
     }
     setChatStatus("sending");setChatError(undefined);
-    void sendConversationMessage(body,mentions,requestId).then(created=>{
-      const mapped=created.map(toChatMessage);
-      setMessages(old=>[...old.filter(existing=>!created.some(message=>message.id===existing.id)),...mapped]);
-      for(const message of mapped){
-        const agent=state.agents.find(item=>item.id===message.speakerId);
-        showBubble({id:"chat-"+message.id,messageId:message.id,speakerId:message.speakerId??"player",speakerName:message.author,body:message.body,mentions:message.mentions,position:agent?{...agent.position}:{...playerPosition.current}});
-      }
+    void sendConversationMessage(conversationScope,body,mentions).then(created=>{
+      const mapped=toChatMessage(created);setMessages(old=>[...old.filter(existing=>existing.id!==created.id),mapped]);
+      showBubble({id:"chat-"+mapped.id,messageId:mapped.id,speakerId:"player",speakerName:mapped.author,body:mapped.body,mentions:mapped.mentions,position:{...playerPosition.current}});
       setChatStatus("connected");
     }).catch(error=>{
       const fallback:ChatMessage={id:"local-"+requestId,author:"You",speakerId:"player",body,mentions,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})};
