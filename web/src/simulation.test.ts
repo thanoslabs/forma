@@ -11,6 +11,7 @@ describe("simulation",()=>{
   for(let i=0;i<100;i++)state=tickSimulation(state);
   expect(state.tasks.find(t=>t.id==="design")?.status).toBe("done");
  });
+ it("walks to a reserved chair before working",()=>{let state=assignTask(initialSimulation(),"design","atlas");for(let i=0;i<20&&state.agents[0].status!=="working";i++)state=tickSimulation(state);expect(state.agents[0].status).toBe("working");expect(state.agents[0].pose).toBe("work");expect(state.agents[0].workstationId).toBe("workstation-1");});
  it("does not progress while paused",()=>{
   const state={...initialSimulation(),running:false};expect(tickSimulation(state)).toBe(state);
  });

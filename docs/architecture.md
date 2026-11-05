@@ -35,6 +35,12 @@ Persisted message writes require an `Idempotency-Key`. An agent mention is dispa
 
 The workspace agent roster is a live, connection-scoped projection from configured agent adapters. Provider IDs are always paired with a connection ID, and the browser periodically refreshes this projection. When no agent connection is configured, the local office simulation remains available as a deliberate demo fallback.
 
+World movement uses a logical tile grid independent of viewport scaling. Players move between adjacent walkable cells, autonomous actors use deterministic A* paths, and furniture contributes blocked and interaction cells. Pixi interpolates between committed tile positions so navigation remains visually smooth without introducing free-coordinate drift.
+
+The browser models each workspace as an office floor. A scene manifest supplies its stable ID, floor number, spawn, and elevator cell; the elevator switches the active workspace conversation and agent projection without reloading the page. A shared street-level scene provides the building entrance, sidewalks, park space, crosswalk, and ambient traffic without changing the active workspace. Player positions are remembered independently per scene.
+
+The street background and the initial Forma character atlas were generated with OpenAI's built-in image generation tool from original Forma-specific prompts. Runtime geometry, collision cells, entrances, cars, traffic signals, labels, and interaction state remain code-defined so the artwork can be replaced without changing world behavior.
+
 ## Security
 Credentials are encrypted at rest with authenticated encryption, bound to their connection ID, and never sent to the browser. API bearer checks use constant-time comparison; health and readiness probes remain separately accessible. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
 
