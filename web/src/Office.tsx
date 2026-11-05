@@ -87,7 +87,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onOpenProjects
       node.eventMode = "static"; node.cursor = "pointer";
       node.on("pointerdown", e => {
        e.stopPropagation();
-       drag = { id: a.id, pointerId: e.pointerId, start: { ...actors.get(a.id)?.position ?? a.position }, moved: false };
+       drag = { id: a.id, pointerId: e.pointerId, start: { ...(actors.get(a.id)?.position ?? a.position) }, moved: false };
        live.current.onSelect?.(a.id);
       });
       node.on("pointertap", e => e.stopPropagation());
