@@ -8,16 +8,21 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/thanoslabs/forma/internal/conversations"
 	"github.com/thanoslabs/forma/internal/workspaces"
 )
 
-type API struct{ workspaces workspaces.Repository }
+type API struct {
+	workspaces    workspaces.Repository
+	conversations conversations.Repository
+}
 
-func New(workspaceRepository workspaces.Repository) *API {
-	return &API{workspaces: workspaceRepository}
+func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository) *API {
+	return &API{workspaces: workspaceRepository, conversations: conversationRepository}
 }
 
 func (a *API) Register(mux *http.ServeMux) {
+	a.registerConversations(mux)
 	mux.HandleFunc("GET /api/v1/workspaces", a.listWorkspaces)
 	mux.HandleFunc("POST /api/v1/workspaces", a.createWorkspace)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections", a.listConnections)

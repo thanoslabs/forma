@@ -36,7 +36,8 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	httpapi.New(postgres.New(pool)).Register(mux)
+	store := postgres.New(pool)
+	httpapi.New(store, store).Register(mux)
 	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
 		httpapi.NewMockAPI().Register(mux)
 	}
