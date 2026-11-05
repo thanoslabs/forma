@@ -68,11 +68,10 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
    app.stage.on("pointerup", finishDrag);
    app.stage.on("pointerupoutside", finishDrag);
    await preloadCharacterSprites();
-   const furniture = new Container(); app.stage.addChild(furniture);
-   const characters=new Container();characters.sortableChildren=true;app.stage.addChild(characters);
-   const playerCharacter=createCharacterSprite();const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);characters.addChild(playerNode);let renderedPlayer={...live.current.playerState.position};
+   const world=new Container();world.sortableChildren=true;app.stage.addChild(world);
+   const playerCharacter=createCharacterSprite();const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);world.addChild(playerNode);let renderedPlayer={...live.current.playerState.position};
    let deskKey = "";
-   const drawFurniture = (positions: Position[]) => { furniture.removeChildren().forEach(child => child.destroy({children:true})); furniture.addChild(makeWorkstations(positions)); };
+   let furniture:Container[]=[];const drawFurniture = (positions: Position[]) => { furniture.forEach(child=>{world.removeChild(child);child.destroy({children:true});});furniture=makeWorkstations(positions);world.addChild(...furniture); };
    drawFurniture(live.current.deskPositions);
    app.ticker.add(ticker => {
     const key = JSON.stringify(live.current.deskPositions); if (key !== deskKey) { deskKey = key; drawFurniture(live.current.deskPositions); }
@@ -90,7 +89,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
       node.on("pointertap", e => e.stopPropagation());
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
       label.anchor.set(0.5);
-      characters.addChild(node);app.stage.addChild(label);
+      world.addChild(node);app.stage.addChild(label);
       actor = { node,character,label, position: { ...a.position }, target: { ...a.position }, source: { ...a.position },direction:"southeast" };
       actors.set(a.id, actor);
      }
