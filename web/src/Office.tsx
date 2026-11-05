@@ -13,19 +13,19 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number };
-export type OfficeProps = { hideActorArt?: boolean; agents?: OfficeAgent[]; onSelect?: (id: string) => void; onDeselect?: () => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
+export type OfficeProps = { hideActorArt?: boolean; agents?: OfficeAgent[]; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, onSelect, onDeselect, onMove, selectedId, deskPositions = desks, hideActorArt = false }: OfficeProps) {
+export function Office({ agents = fallback, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions = desks, hideActorArt = false }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
- const live = useRef({ agents, onSelect, onDeselect, onMove, selectedId, deskPositions });
- live.current = { agents, onSelect, onDeselect, onMove, selectedId, deskPositions };
+ const live = useRef({ agents, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions });
+ live.current = { agents, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions };
  useEffect(() => {
   const element = host.current;
   if (!element) return;
   const app = new Application();
   let disposed = false;
   const actors = new Map<string, { node: Container; label: Text; position: Position; target: Position; source: Position }>();
-  let activeId: string | undefined;
+  let drag: { id: string; pointerId: number; start: Position; moved: boolean } | undefined;
   let observerCleanup: (() => void) | undefined;
   const init = async () => {
    await app.init({ width: 860, height: 490, background: "#c4e5ed", antialias: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
@@ -46,13 +46,32 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
    const room = new Graphics().rect(0, 0, 860, 490).fill("#f5dfb6");
    room.eventMode = "static";
    room.cursor = "crosshair";
-   room.on("pointertap", e => {
-    const point = clampPosition(e.getLocalPosition(app.stage));
-    const id = activeId ?? live.current.selectedId ?? live.current.agents[0]?.id;
-    if (id) { const actor = actors.get(id); if (actor) actor.target = point; live.current.onMove?.(id, point); }
-   });
+   room.on("pointertap", () => live.current.onDeselect?.());
    app.stage.addChild(room);
    app.stage.addChild(new Graphics().ellipse(430, 310, 290, 115).fill("#a9c8a6"));
+   // The project board is a physical, clickable fixture in the room.
+   const board = new Graphics().roundRect(30, 48, 165, 76, 9).fill("#26374c").stroke({ color: "#d8b37e", width: 5 });
+   board.eventMode = "static"; board.cursor = "pointer";
+   board.on("pointertap", e => { e.stopPropagation(); live.current.onOpenProjects?.(); });
+   const boardTitle = new Text({ text: "PROJECT BOARD", style: { fontFamily: "sans-serif", fontSize: 16, fontWeight: "bold", fill: "#f5e8d2" } });
+   boardTitle.position.set(44, 59); board.eventMode = "static";
+   const boardSubtitle = new Text({ text: "Open projects  ›", style: { fontFamily: "sans-serif", fontSize: 12, fill: "#b9d4e3" } });
+   boardSubtitle.position.set(44, 89);
+   board.addChild(boardTitle, boardSubtitle); app.stage.addChild(board);
+   app.stage.eventMode = "static";
+   app.stage.on("globalpointermove", e => {
+    if (!drag) return;
+    const point = clampPosition(e.getLocalPosition(app.stage));
+    if (Math.hypot(point.x - drag.start.x, point.y - drag.start.y) > 5) drag.moved = true;
+    if (drag.moved) {
+     const actor = actors.get(drag.id);
+     if (actor) { actor.target = point; actor.position = point; }
+     live.current.onMove?.(drag.id, point);
+    }
+   });
+   const finishDrag = () => { drag = undefined; };
+   app.stage.on("pointerup", finishDrag);
+   app.stage.on("pointerupoutside", finishDrag);
    const furniture = new Container(); app.stage.addChild(furniture);
    let deskKey = "";
    const drawFurniture = (positions: Position[]) => { furniture.removeChildren().forEach(child => child.destroy()); for (const d of positions) furniture.addChild(new Graphics().roundRect(d.x - 65, d.y, 130, 50, 12).fill("#9b684e").roundRect(d.x - 35, d.y - 35, 70, 48, 6).fill("#3d5664")); };
@@ -66,7 +85,12 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
       const node = new Container();
       node.addChild(new Graphics().ellipse(0, 0, 38, 43).fill(a.color ?? 0x7e70cf).ellipse(-9, -8, 4, 6).fill(0xffffff).ellipse(9, -8, 4, 6).fill(0xffffff).ellipse(-9, -8, 2, 3).fill(0x25384d).ellipse(9, -8, 2, 3).fill(0x25384d).ellipse(0, 5, 13, 7).fill(0xe5ba67));
       node.eventMode = "static"; node.cursor = "pointer";
-      node.on("pointertap", e => { e.stopPropagation(); live.current.onSelect?.(a.id); });
+      node.on("pointerdown", e => {
+       e.stopPropagation();
+       drag = { id: a.id, pointerId: e.pointerId, start: { ...(actors.get(a.id)?.position ?? a.position) }, moved: false };
+       live.current.onSelect?.(a.id);
+      });
+      node.on("pointertap", e => e.stopPropagation());
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
       label.anchor.set(0.5);
       app.stage.addChild(node, label);
@@ -74,7 +98,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
       actors.set(a.id, actor);
      }
      if (actor.source.x !== a.position.x || actor.source.y !== a.position.y) { actor.target = clampPosition(a.position); actor.source = { ...a.position }; }
-     actor.position = walkToward(actor.position, actor.target, Math.min(12, 2.5 * ticker.deltaTime));
+     actor.position = drag?.id === a.id && drag.moved ? actor.target : walkToward(actor.position, actor.target, Math.min(12, 2.5 * ticker.deltaTime));
      actor.node.position.set(actor.position.x, actor.position.y);
      actor.label.position.set(actor.position.x, actor.position.y + 47);
      actor.label.text = a.name + " · " + a.status;
