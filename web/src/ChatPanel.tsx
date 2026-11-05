@@ -38,7 +38,7 @@ export function ChatPanel({agents,messages,onSend,focusedMessageId,status,error}
   parts.push(message.body.slice(offset));return parts;
  };
  return <section className="chat-panel" aria-label="Office chat">
-  <div className="chat-heading"><div><h3>Office chat</h3><p>Demo conversation · mention agents and projects with @</p></div><span className="chat-demo">{status==="connected"?"MOCK AGENT":status==="sending"?"SENDING":status==="connecting"?"CONNECTING":"LOCAL FALLBACK"}</span></div>
+  <div className="chat-heading"><div><h3>Office chat</h3><p>Shared conversation · mention agents and projects with @</p></div><span className="chat-demo">{status==="connected"?"PERSISTED":status==="sending"?"SENDING":status==="connecting"?"CONNECTING":"LOCAL FALLBACK"}</span></div>
   {error&&<p role="status" className="chat-error">{error}</p>}
   <div className="chat-messages" role="log" aria-live="polite">{messages.map(m=><article key={m.id} id={"chat-message-"+m.id} className={"chat-message "+(m.author==="You"?"mine":"")+(focusedMessageId===String(m.id)?" focused":"")}>
    <div className="chat-message-meta"><strong>{m.author}</strong><small>{m.time}</small></div><p>{renderMessage(m)}</p>

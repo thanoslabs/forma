@@ -16,3 +16,12 @@ Each milestone requires automated tests, docs, and green CI. PRs should be stack
 3. Mock agent events survive server restart and can replay to a browser.
 4. UI distinguishes connected, stale, and unknown provider state.
 5. CI runs unit, integration, migration, and frontend tests.
+
+## Current increment
+
+- Startup applies embedded, versioned migrations under an advisory lock.
+- Workspace, connection, conversation, and message APIs persist to PostgreSQL.
+- Conversation WebSockets replay durable history before live in-process updates.
+- The browser bootstraps a shared workspace and falls back locally when the API is unavailable.
+
+The next increment routes structured agent mentions through configured harness connections with idempotent agent turns, then projects resulting state into the office.

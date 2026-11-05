@@ -1,24 +1,18 @@
-import {afterEach,describe,expect,it,vi} from "vitest";
-import {listConversationMessages,sendConversationMessage} from "./conversationApi";
+import{afterEach,describe,expect,it,vi}from"vitest";
+import{ensureDefaultConversation,listConversationMessages,sendConversationMessage}from"./conversationApi";
 
 afterEach(()=>vi.unstubAllGlobals());
-describe("conversation API",()=>{
- it("loads the default conversation",async()=>{
-  const fetch=vi.fn().mockResolvedValue(new Response("[]",{status:200,headers:{"Content-Type":"application/json"}}));vi.stubGlobal("fetch",fetch);
-  await expect(listConversationMessages()).resolves.toEqual([]);
-  expect(fetch).toHaveBeenCalledWith("/api/v1/demo/conversations/default/messages",{signal:undefined});
+const response=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{"Content-Type":"application/json"}});
+describe("persisted conversation API",()=>{
+ it("bootstraps an empty workspace and conversation",async()=>{
+  const fetch=vi.fn().mockResolvedValueOnce(response([])).mockResolvedValueOnce(response({id:"workspace-1",name:"Forma"},201)).mockResolvedValueOnce(response([])).mockResolvedValueOnce(response({id:"conversation-1",workspaceId:"workspace-1",title:"Office"},201));vi.stubGlobal("fetch",fetch);
+  await expect(ensureDefaultConversation()).resolves.toEqual({workspaceId:"workspace-1",conversationId:"conversation-1"});
+  expect(fetch).toHaveBeenCalledTimes(4);expect(JSON.parse(String((fetch.mock.calls[1][1] as RequestInit).body))).toEqual({name:"Forma"});
  });
- it("sends mentions with an idempotency key",async()=>{
-  const fetch=vi.fn().mockResolvedValue(new Response('{"messages":[]}',{status:200,headers:{"Content-Type":"application/json"}}));vi.stubGlobal("fetch",fetch);
-  const mentions=[{kind:"agent" as const,id:"atlas",name:"Atlas",text:"@Atlas",start:6,end:12}];
-  await sendConversationMessage("hello @Atlas",mentions,"request-1");
-  const init=fetch.mock.calls[0][1] as RequestInit;
-  expect(init.method).toBe("POST");
-  expect(init.headers).toEqual({"Content-Type":"application/json","Idempotency-Key":"request-1"});
-  expect(JSON.parse(String(init.body))).toEqual({body:"hello @Atlas",mentions});
+ it("loads and sends workspace-scoped messages",async()=>{
+  const fetch=vi.fn().mockResolvedValueOnce(response([])).mockResolvedValueOnce(response({id:"message-1"},201));vi.stubGlobal("fetch",fetch);const scope={workspaceId:"workspace-1",conversationId:"conversation-1"};
+  await expect(listConversationMessages(scope)).resolves.toEqual([]);await sendConversationMessage(scope,"hello",[]);
+  expect(fetch.mock.calls[0][0]).toContain("/workspaces/workspace-1/conversations/conversation-1/messages");expect(JSON.parse(String((fetch.mock.calls[1][1] as RequestInit).body))).toEqual({body:"hello",mentions:[]});
  });
- it("surfaces an API error",async()=>{
-  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response("agent not found",{status:422})));
-  await expect(sendConversationMessage("hello",[],"request-2")).rejects.toThrow("agent not found");
- });
+ it("surfaces API errors",async()=>{vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response("database unavailable",{status:503})));await expect(ensureDefaultConversation()).rejects.toThrow("database unavailable");});
 });

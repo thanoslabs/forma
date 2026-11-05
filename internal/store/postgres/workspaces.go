@@ -1,0 +1,64 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/thanoslabs/forma/internal/workspaces"
+)
+
+type Store struct{ pool *pgxpool.Pool }
+
+func New(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
+
+func (s *Store) ListWorkspaces(ctx context.Context) ([]workspaces.Workspace, error) {
+	rows, err := s.pool.Query(ctx, "SELECT id, name, created_at FROM workspaces ORDER BY created_at, id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make([]workspaces.Workspace, 0)
+	for rows.Next() {
+		var workspace workspaces.Workspace
+		if err := rows.Scan(&workspace.ID, &workspace.Name, &workspace.CreatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, workspace)
+	}
+	return result, rows.Err()
+}
+
+func (s *Store) CreateWorkspace(ctx context.Context, workspace workspaces.Workspace) (workspaces.Workspace, error) {
+	err := s.pool.QueryRow(ctx, "INSERT INTO workspaces(id, name) VALUES($1, $2) RETURNING created_at", workspace.ID, workspace.Name).Scan(&workspace.CreatedAt)
+	return workspace, err
+}
+
+func (s *Store) ListConnections(ctx context.Context, workspaceID string) ([]workspaces.Connection, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, workspace_id, adapter_id, provider_type, display_name, created_at
+ FROM connections WHERE workspace_id=$1 ORDER BY created_at, id`, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make([]workspaces.Connection, 0)
+	for rows.Next() {
+		var connection workspaces.Connection
+		if err := rows.Scan(&connection.ID, &connection.WorkspaceID, &connection.AdapterID, &connection.ProviderType, &connection.DisplayName, &connection.CreatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, connection)
+	}
+	return result, rows.Err()
+}
+
+func (s *Store) CreateConnection(ctx context.Context, connection workspaces.Connection) (workspaces.Connection, error) {
+	err := s.pool.QueryRow(ctx, `INSERT INTO connections(id, workspace_id, adapter_id, provider_type, display_name)
+ VALUES($1, $2, $3, $4, $5) RETURNING created_at`, connection.ID, connection.WorkspaceID, connection.AdapterID, connection.ProviderType, connection.DisplayName).Scan(&connection.CreatedAt)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return workspaces.Connection{}, workspaces.ErrNotFound
+	}
+	return connection, err
+}

@@ -29,6 +29,8 @@ Workspace contains Connections, Rooms and Conversations. A Connection identifies
 ## Commands and reconciliation
 Commands have idempotency keys, authorized actor, target capability, pending/accepted/failed outcome and traceable provider response. Never treat an accepted dispatch as a successful execution. Adapter streams/webhooks are preferred, polling is a fallback. Durable cursors, periodic reconciliation, duplicate suppression and bounded retries are required. PostgreSQL event log is durable; LISTEN/NOTIFY may wake subscribers but must not be used as the sole event store.
 
+Conversation WebSockets replay the persisted message timeline before emitting in-process updates. PostgreSQL remains authoritative; the in-process broker is deliberately bounded and slow subscribers reconnect for replay. Multi-replica deployments will add LISTEN/NOTIFY as a wake-up mechanism without replacing durable history.
+
 ## Security
 Credentials are encrypted at rest and never sent to the browser. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
 

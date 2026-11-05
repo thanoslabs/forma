@@ -15,7 +15,6 @@ Install the versions pinned in `.tool-versions` with `mise install` or `asdf ins
 
 ```sh
 make dev-up
-make migrate-up
 FORMA_ENABLE_DEMO_API=true make run
 ```
 
