@@ -108,7 +108,7 @@ export function OfficeCharacters({agents,playerState,selectedId}:{agents:OfficeA
   scene.add(new THREE.HemisphereLight(0xffffff,0x897da0,2.2));
   const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(-3,7,9);scene.add(light);
   const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(860,490);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(860,490);\n  const resize=()=>{const width=el.clientWidth||860,height=el.clientHeight||490;renderer.setSize(width,height,false);const aspect=width/height;camera.left=-4.9*aspect;camera.right=4.9*aspect;camera.updateProjectionMatrix();};\n  const observer=new ResizeObserver(resize);observer.observe(el);resize();
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.domElement.style.width="100%";renderer.domElement.style.height="100%";el.appendChild(renderer.domElement);
   const models=new Map<string,{puppet:Puppet,x:number,y:number,initialized:boolean}>();
   const selection=new THREE.Mesh(new THREE.RingGeometry(0.55,0.69,48),new THREE.MeshBasicMaterial({color:0x8d65ee,transparent:true,opacity:0.9,side:THREE.DoubleSide,depthTest:false}));
@@ -128,21 +128,21 @@ export function OfficeCharacters({agents,playerState,selectedId}:{agents:OfficeA
     const dx=agent.position.x-entry.x,dy=agent.position.y-entry.y;
     const moving=Math.hypot(dx,dy)>0.8;
     entry.x+=dx*frameStep;entry.y+=dy*frameStep;
-    entry.puppet.root.position.x=(entry.x-430)/50;
+    entry.puppet.root.position.x=(entry.x-430)/860*(camera.right-camera.left);
     entry.puppet.root.position.z=0;
-    entry.puppet.root.position.y=(245-entry.y)/50-0.55;
+    entry.puppet.root.position.y=(245-entry.y)/490*9.8-0.55;
     entry.puppet.root.scale.setScalar(0.46);
     if(moving)entry.puppet.root.rotation.y=Math.atan2(dx,-dy);
     poseCharacter(entry.puppet,motionForAgent(agent,moving),t);
     if(latest.current.selectedId===agent.id){selection.visible=true;selection.position.set(entry.puppet.root.position.x,entry.puppet.root.position.y+0.05,0.1);}
    }
    const ps=latest.current.playerState;
-   player.root.position.set((ps.position.x-430)/50,(245-ps.position.y)/50-0.55,0);
+   player.root.position.set((ps.position.x-430)/860*(camera.right-camera.left),(245-ps.position.y)/490*9.8-0.55,0);
    player.root.rotation.y=ps.facing;
    poseCharacter(player,ps.moving?"walk":"idle",t);
    renderer.render(scene,camera);
   };animate();
-  return()=>{cancelAnimationFrame(frame);[...Array.from(models.values()).map(v=>v.puppet),player].forEach(puppet=>{puppet.root.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(v=>v.dispose());else m.dispose();}});});selection.geometry.dispose();(selection.material as THREE.Material).dispose();renderer.dispose();renderer.domElement.remove();};
+  return()=>{observer.disconnect();cancelAnimationFrame(frame);[...Array.from(models.values()).map(v=>v.puppet),player].forEach(puppet=>{puppet.root.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(v=>v.dispose());else m.dispose();}});});selection.geometry.dispose();(selection.material as THREE.Material).dispose();renderer.dispose();renderer.domElement.remove();};
  },[]);
  return <div ref={host} className="office-characters" aria-hidden="true"/>;
 }
