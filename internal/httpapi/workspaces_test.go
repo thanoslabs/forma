@@ -127,12 +127,15 @@ func TestWorkspaceAPI(t *testing.T) {
 		t.Fatalf("workspace: %#v %v", workspace, err)
 	}
 
-	request = httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/"+workspace.ID+"/connections", bytes.NewBufferString(`{"adapterId":"mock","providerType":"agent","displayName":"Mock agents"}`))
+	request = httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/"+workspace.ID+"/connections", bytes.NewBufferString(`{"adapterId":"mock","providerType":"agent","displayName":"Mock agents","credential":"do-not-return"}`))
 	request.Header.Set("Content-Type", "application/json")
 	recorder = httptest.NewRecorder()
 	mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("create connection: %d %s", recorder.Code, recorder.Body.String())
+	}
+	if bytes.Contains(recorder.Body.Bytes(), []byte("do-not-return")) {
+		t.Fatal("credential leaked in response")
 	}
 
 	recorder = httptest.NewRecorder()
