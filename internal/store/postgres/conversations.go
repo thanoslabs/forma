@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/thanoslabs/forma/internal/conversations"
 )
@@ -48,38 +49,49 @@ func (s *Store) ListMessages(ctx context.Context, workspaceID, conversationID st
 	}
 	return result, rows.Err()
 }
-func (s *Store) CreateMessage(ctx context.Context, workspaceID string, message conversations.Message) (conversations.Message, error) {
+func (s *Store) CreateMessage(ctx context.Context, workspaceID, idempotencyKey string, message conversations.Message) (conversations.Message, bool, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return conversations.Message{}, err
+		return conversations.Message{}, false, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	var exists bool
 	if err := tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM conversations WHERE id=$1 AND workspace_id=$2)", message.ConversationID, workspaceID).Scan(&exists); err != nil {
-		return conversations.Message{}, err
+		return conversations.Message{}, false, err
 	}
 	if !exists {
-		return conversations.Message{}, conversations.ErrNotFound
+		return conversations.Message{}, false, conversations.ErrNotFound
 	}
 	var participantID string
 	err = tx.QueryRow(ctx, `INSERT INTO conversation_participants(id,conversation_id,participant_type,display_name,user_id) VALUES($1,$2,'user',$3,$4) ON CONFLICT (conversation_id,user_id) WHERE user_id IS NOT NULL DO UPDATE SET display_name=EXCLUDED.display_name RETURNING id`, newUUID(), message.ConversationID, message.Author.Name, message.Author.ID).Scan(&participantID)
 	if err != nil {
-		return conversations.Message{}, err
+		return conversations.Message{}, false, err
 	}
 	mentions, err := json.Marshal(message.Mentions)
 	if err != nil {
-		return conversations.Message{}, err
+		return conversations.Message{}, false, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO conversation_messages(id,conversation_id,author_participant_id,reply_to_message_id,body,mentions,occurred_at) VALUES($1,$2,$3,NULLIF($4,'')::uuid,$5,$6::jsonb,$7)`, message.ID, message.ConversationID, participantID, message.ReplyToMessageID, message.Body, string(mentions), message.OccurredAt); err != nil {
-		return conversations.Message{}, err
+	tag, err := tx.Exec(ctx, `INSERT INTO conversation_messages(id,conversation_id,author_participant_id,reply_to_message_id,body,mentions,occurred_at,idempotency_key) VALUES($1,$2,$3,NULLIF($4,'')::uuid,$5,$6::jsonb,$7,$8) ON CONFLICT (conversation_id,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`, message.ID, message.ConversationID, participantID, message.ReplyToMessageID, message.Body, string(mentions), message.OccurredAt, idempotencyKey)
+	if err != nil {
+		return conversations.Message{}, false, err
+	}
+	if tag.RowsAffected() == 0 {
+		existing, err := scanMessage(tx.QueryRow(ctx, `SELECT m.id,m.conversation_id,m.body,COALESCE(p.participant_type,'system'),COALESCE(p.user_id,p.provider_participant_id,''),COALESCE(p.display_name,'Forma'),m.mentions,m.occurred_at,COALESCE(m.reply_to_message_id::text,'') FROM conversation_messages m LEFT JOIN conversation_participants p ON p.id=m.author_participant_id WHERE m.conversation_id=$1 AND m.idempotency_key=$2`, message.ConversationID, idempotencyKey))
+		if err != nil {
+			return conversations.Message{}, false, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return conversations.Message{}, false, err
+		}
+		return existing, false, nil
 	}
 	if _, err := tx.Exec(ctx, "UPDATE conversations SET updated_at=$1 WHERE id=$2", message.OccurredAt, message.ConversationID); err != nil {
-		return conversations.Message{}, err
+		return conversations.Message{}, false, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return conversations.Message{}, err
+		return conversations.Message{}, false, err
 	}
-	return message, nil
+	return message, true, nil
 }
 
 type rowScanner interface{ Scan(...any) error }

@@ -59,6 +59,11 @@ func (a *API) listConversationMessages(w http.ResponseWriter, r *http.Request) {
 	respond(w, items)
 }
 func (a *API) createConversationMessage(w http.ResponseWriter, r *http.Request) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" || len(idempotencyKey) > 200 {
+		http.Error(w, "Idempotency-Key must contain between 1 and 200 bytes", http.StatusBadRequest)
+		return
+	}
 	var request struct {
 		Body     string                  `json:"body"`
 		Mentions []conversations.Mention `json:"mentions"`
@@ -71,7 +76,8 @@ func (a *API) createConversationMessage(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "invalid message", 400)
 		return
 	}
-	message, err := a.conversations.CreateMessage(r.Context(), r.PathValue("workspaceID"), conversations.Message{ID: newID(), ConversationID: r.PathValue("conversationID"), Body: request.Body, Author: conversations.Author{Kind: "user", ID: "local-user", Name: "You"}, Mentions: request.Mentions, OccurredAt: time.Now().UTC()})
+	workspaceID := r.PathValue("workspaceID")
+	message, created, err := a.conversations.CreateMessage(r.Context(), workspaceID, idempotencyKey, conversations.Message{ID: newID(), ConversationID: r.PathValue("conversationID"), Body: request.Body, Author: conversations.Author{Kind: "user", ID: "local-user", Name: "You"}, Mentions: request.Mentions, OccurredAt: time.Now().UTC()})
 	if errors.Is(err, conversations.ErrNotFound) {
 		http.NotFound(w, r)
 		return
@@ -80,9 +86,18 @@ func (a *API) createConversationMessage(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "unable to create message", 500)
 		return
 	}
-	a.live.Publish(message)
+	if created {
+		a.live.Publish(message)
+		if a.router != nil {
+			_ = a.router.Route(r.Context(), workspaceID, idempotencyKey, message)
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
+	if created {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 	_ = json.NewEncoder(w).Encode(message)
 }
 func validMentions(body string, mentions []conversations.Mention) bool {

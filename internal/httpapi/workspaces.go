@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -10,23 +11,43 @@ import (
 	"time"
 
 	"github.com/thanoslabs/forma/internal/conversations"
+	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/realtime"
 	"github.com/thanoslabs/forma/internal/workspaces"
 )
+
+type MessageRouter interface {
+	Route(context.Context, string, string, conversations.Message) error
+}
+
+type AgentProjectionReader interface {
+	ListAgents(context.Context, string) ([]projections.Agent, error)
+}
 
 type API struct {
 	workspaces    workspaces.Repository
 	conversations conversations.Repository
 	live          *realtime.Broker
+	router        MessageRouter
+	agents        AgentProjectionReader
 }
 
 const writeTimeout = 10 * time.Second
 
-func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository, live *realtime.Broker) *API {
+func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository, live *realtime.Broker, routers ...MessageRouter) *API {
 	if live == nil {
 		live = realtime.New()
 	}
-	return &API{workspaces: workspaceRepository, conversations: conversationRepository, live: live}
+	api := &API{workspaces: workspaceRepository, conversations: conversationRepository, live: live}
+	if len(routers) > 0 {
+		api.router = routers[0]
+	}
+	return api
+}
+
+func (a *API) WithAgentProjections(reader AgentProjectionReader) *API {
+	a.agents = reader
+	return a
 }
 
 func (a *API) Register(mux *http.ServeMux) {
@@ -35,6 +56,23 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/workspaces", a.createWorkspace)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections", a.listConnections)
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections", a.createConnection)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents", a.listAgents)
+}
+
+func (a *API) listAgents(w http.ResponseWriter, r *http.Request) {
+	if a.agents == nil {
+		http.Error(w, "agent projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	items, err := a.agents.ListAgents(r.Context(), r.PathValue("workspaceID"))
+	if err != nil && len(items) == 0 {
+		http.Error(w, "unable to load agent projections", http.StatusBadGateway)
+		return
+	}
+	if err != nil {
+		w.Header().Set("Warning", `199 forma "some agent connections could not be read"`)
+	}
+	respond(w, items)
 }
 
 func (a *API) listWorkspaces(w http.ResponseWriter, r *http.Request) {
@@ -83,6 +121,8 @@ func (a *API) createConnection(w http.ResponseWriter, r *http.Request) {
 		AdapterID    string `json:"adapterId"`
 		ProviderType string `json:"providerType"`
 		DisplayName  string `json:"displayName"`
+		EndpointURL  string `json:"endpointUrl"`
+		Credential   string `json:"credential"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
@@ -90,11 +130,12 @@ func (a *API) createConnection(w http.ResponseWriter, r *http.Request) {
 	request.AdapterID = strings.TrimSpace(request.AdapterID)
 	request.ProviderType = strings.TrimSpace(request.ProviderType)
 	request.DisplayName = strings.TrimSpace(request.DisplayName)
-	if request.AdapterID == "" || len(request.AdapterID) > 120 || request.DisplayName == "" || len(request.DisplayName) > 120 || !validProviderType(request.ProviderType) {
+	request.EndpointURL = strings.TrimSpace(request.EndpointURL)
+	if request.AdapterID == "" || len(request.AdapterID) > 120 || request.DisplayName == "" || len(request.DisplayName) > 120 || len(request.EndpointURL) > 2048 || len(request.Credential) > 16384 || !validProviderType(request.ProviderType) {
 		http.Error(w, "invalid connection metadata", http.StatusBadRequest)
 		return
 	}
-	connection, err := a.workspaces.CreateConnection(r.Context(), workspaces.Connection{ID: newID(), WorkspaceID: r.PathValue("workspaceID"), AdapterID: request.AdapterID, ProviderType: request.ProviderType, DisplayName: request.DisplayName})
+	connection, err := a.workspaces.CreateConnection(r.Context(), workspaces.Connection{ID: newID(), WorkspaceID: r.PathValue("workspaceID"), AdapterID: request.AdapterID, ProviderType: request.ProviderType, DisplayName: request.DisplayName, EndpointURL: request.EndpointURL, Credential: request.Credential})
 	if errors.Is(err, workspaces.ErrNotFound) {
 		http.NotFound(w, r)
 		return

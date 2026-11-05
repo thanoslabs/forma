@@ -31,8 +31,14 @@ Commands have idempotency keys, authorized actor, target capability, pending/acc
 
 Conversation WebSockets replay the persisted message timeline before emitting in-process updates. PostgreSQL remains authoritative; the in-process broker is deliberately bounded and slow subscribers reconnect for replay. Multi-replica deployments will add LISTEN/NOTIFY as a wake-up mechanism without replacing durable history.
 
+Persisted message writes require an `Idempotency-Key`. An agent mention is dispatchable only when it includes both the provider agent ID and its Forma connection ID; a display-name mention alone is inert. Forma records an `agent_turn` and `agent_command` before invoking an input-capable adapter, then persists the correlated reply or failure. Replaying the same message key returns the original message without invoking the adapter again.
+
+The workspace agent roster is a live, connection-scoped projection from configured agent adapters. Provider IDs are always paired with a connection ID, and the browser periodically refreshes this projection. When no agent connection is configured, the local office simulation remains available as a deliberate demo fallback.
+
 ## Security
-Credentials are encrypted at rest and never sent to the browser. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
+Credentials are encrypted at rest with authenticated encryption, bound to their connection ID, and never sent to the browser. API bearer checks use constant-time comparison; health and readiness probes remain separately accessible. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
+
+Production mode validates its security boundary before opening a listener: database, API token, credential key, and trusted browser origins are mandatory, while demo routes are prohibited. Exact origin checks cover HTTP and WebSocket requests. Responses carry request correlation and hardened browser headers; server timeouts and graceful termination bound resource use and deployment disruption.
 
 ## Initial stack
 Go + pgx + SQL migrations; React + TypeScript + Vite; PixiJS; PostgreSQL; Docker Compose for development; OCI and Helm for deployment. CI validates Go, frontend, migrations and adapter conformance fixtures. Avoid an extra queue or distributed scheduler until there is a measured need.

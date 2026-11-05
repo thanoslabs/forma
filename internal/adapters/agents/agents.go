@@ -64,6 +64,9 @@ type Dispatcher interface {
 type InputSender interface {
 	SendInput(ctx context.Context, agentID, body, idempotencyKey string) (string, error)
 }
+type AsyncInputSender interface {
+	SendInputAsync(ctx context.Context, agentID, body, idempotencyKey string) error
+}
 type Subscriber interface {
 	Subscribe(ctx context.Context, cursor string) (<-chan Event, error)
 }

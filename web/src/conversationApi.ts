@@ -21,7 +21,11 @@ export async function ensureDefaultConversation(signal?:AbortSignal):Promise<Con
 
 function messagesPath(scope:ConversationScope):string{return `/api/v1/workspaces/${encodeURIComponent(scope.workspaceId)}/conversations/${encodeURIComponent(scope.conversationId)}/messages`;}
 export function listConversationMessages(scope:ConversationScope,signal?:AbortSignal):Promise<ConversationMessage[]>{return request(messagesPath(scope),{signal});}
-export function sendConversationMessage(scope:ConversationScope,body:string,mentions:LinkedMention[]):Promise<ConversationMessage>{return request(messagesPath(scope),json({body,mentions}));}
+export function sendConversationMessage(scope:ConversationScope,body:string,mentions:LinkedMention[],idempotencyKey:string=crypto.randomUUID()):Promise<ConversationMessage>{
+ const init=json({body,mentions});
+ init.headers={...(init.headers as Record<string,string>),"Idempotency-Key":idempotencyKey};
+ return request(messagesPath(scope),init);
+}
 
 export function watchConversationMessages(scope:ConversationScope,onMessage:(message:ConversationMessage)=>void,onDisconnect:()=>void):()=>void{
  const url=new URL(messagesPath(scope)+"/ws",window.location.href);url.protocol=url.protocol==="https:"?"wss:":"ws:";

@@ -27,10 +27,20 @@ func TestPersistedConversationAPI(t *testing.T) {
 	}
 	request = httptest.NewRequest("POST", "/api/v1/workspaces/workspace-1/conversations/"+conversation.ID+"/messages", bytes.NewBufferString(`{"body":"hello","mentions":[]}`))
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Idempotency-Key", "message-1")
 	recorder = httptest.NewRecorder()
 	mux.ServeHTTP(recorder, request)
 	if recorder.Code != 201 {
 		t.Fatalf("create message: %d %s", recorder.Code, recorder.Body.String())
+	}
+	firstBody := recorder.Body.String()
+	request = httptest.NewRequest("POST", "/api/v1/workspaces/workspace-1/conversations/"+conversation.ID+"/messages", bytes.NewBufferString(`{"body":"hello","mentions":[]}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Idempotency-Key", "message-1")
+	recorder = httptest.NewRecorder()
+	mux.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK || recorder.Body.String() != firstBody {
+		t.Fatalf("replay message: %d %s", recorder.Code, recorder.Body.String())
 	}
 	recorder = httptest.NewRecorder()
 	mux.ServeHTTP(recorder, httptest.NewRequest("GET", "/api/v1/workspaces/workspace-1/conversations/"+conversation.ID+"/messages", nil))
