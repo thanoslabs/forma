@@ -2,7 +2,7 @@
   "version": 1,
   "image": "atlas.png",
   "frameWidth": 300,
-  "frameHeight": 240,
+  "frameHeight": 300,
   "columns": ["southwest", "southeast", "northwest", "northeast"],
   "rows": ["idle", "walkA", "walkB", "sit", "work"],
   "framesPerSecond": 6,
