@@ -108,7 +108,9 @@ export function OfficeCharacters({agents,playerState,selectedId}:{agents:OfficeA
   scene.add(new THREE.HemisphereLight(0xffffff,0x897da0,2.2));
   const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(-3,7,9);scene.add(light);
   const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(860,490);\n  const resize=()=>{const width=el.clientWidth||860,height=el.clientHeight||490;renderer.setSize(width,height,false);const aspect=width/height;camera.left=-4.9*aspect;camera.right=4.9*aspect;camera.updateProjectionMatrix();};\n  const observer=new ResizeObserver(resize);observer.observe(el);resize();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(860,490);
+  const resize=()=>{const width=el.clientWidth||860,height=el.clientHeight||490;renderer.setSize(width,height,false);const aspect=width/height;camera.left=-4.9*aspect;camera.right=4.9*aspect;camera.updateProjectionMatrix();};
+  const observer=new ResizeObserver(resize);observer.observe(el);resize();
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.domElement.style.width="100%";renderer.domElement.style.height="100%";el.appendChild(renderer.domElement);
   const models=new Map<string,{puppet:Puppet,x:number,y:number,initialized:boolean}>();
   const selection=new THREE.Mesh(new THREE.RingGeometry(0.55,0.69,48),new THREE.MeshBasicMaterial({color:0x8d65ee,transparent:true,opacity:0.9,side:THREE.DoubleSide,depthTest:false}));
