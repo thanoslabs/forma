@@ -30,7 +30,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
    await app.init({ width: 860, height: 490, background: "#c4e5ed", antialias: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
    if (disposed) { app.destroy(true); return; }
    element.appendChild(app.canvas);
-   const room = new Graphics().roundRect(40, 36, 780, 418, 28).fill("#f5dfb6").stroke({ color: "#64818a", width: 7 });
+   const room = new Graphics().rect(0, 0, 860, 490).fill("#f5dfb6");
    room.eventMode = "static";
    room.cursor = "crosshair";
    room.on("pointertap", e => {
