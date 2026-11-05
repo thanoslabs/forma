@@ -87,3 +87,6 @@ function App() {
       </div>
     </div>}
   </div>;
+}
+
+createRoot(document.getElementById("root")!).render(<React.StrictMode><App/></React.StrictMode>);
