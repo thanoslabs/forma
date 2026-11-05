@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	formadb "github.com/thanoslabs/forma/db"
 	"github.com/thanoslabs/forma/internal/httpapi"
 )
 
@@ -29,24 +30,27 @@ func main() {
 	if err := pool.Ping(pingCtx); err != nil {
 		log.Fatal(err)
 	}
+	if err := formadb.MigrateUp(ctx, pool); err != nil {
+		log.Fatal(err)
+	}
 
 	mux := http.NewServeMux()
 	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
 		httpapi.NewMockAPI().Register(mux)
 	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-	 w.Header().Set("Content-Type", "application/json")
-	 _ = json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-	 ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	 defer cancel()
-	 if err := pool.Ping(ctx); err != nil {
-	  http.Error(w, "database unavailable", http.StatusServiceUnavailable)
-	  return
-	 }
-	 w.Header().Set("Content-Type", "application/json")
-	 _ = json.NewEncoder(w).Encode(map[string]string{"status":"ready"})
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := pool.Ping(ctx); err != nil {
+			http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 	})
 	addr := os.Getenv("FORMA_LISTEN_ADDR")
 	if addr == "" {
