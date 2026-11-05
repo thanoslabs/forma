@@ -39,23 +39,19 @@ export function createCharacter(style: CharacterStyle, accent = 0x9271d6): Puppe
  leftArm.position.set(-0.56,1.04,0);rightArm.position.set(0.56,1.04,0);
  leftLeg.position.set(-0.27,0.53,0);rightLeg.position.set(0.27,0.53,0);
  if(style==="agent"){
+  // Shared cubic silhouette for every agent; accent color is the only variation.
   const shell=mat(accent),trim=mat(0xb4a6dd),face=mat(0x15162b,0.24);
-  roundedBox(root,shell,0,0.92,0,1.02,0.79,0.62,0.17);
-  roundedBox(root,cyan,0,0.97,0.35,0.25,0.18,0.07,0.03);
-  roundedBox(head,shell,0,0.18,0,1.48,1.08,0.7,0.24);
-  roundedBox(head,face,0,0.18,0.382,1.15,0.76,0.055,0.15);
-  for(const x of [-0.28,0.28]) {
-   const eye=ball(head,cyan,x,0.22,0.435,0.12,0.075,0.022);eye.rotation.z=x<0?0.17:-0.17;
-  }
-  ball(head,trim,0,0.85,0,0.075,0.16,0.075);
-  ball(head,cyan,0,1.02,0,0.12,0.12,0.12);
-  for(const side of [-1,1]) {
+  roundedBox(root,shell,0,0.94,0,1.04,0.82,0.83,0.09);
+  roundedBox(root,trim,0,0.94,0.435,0.64,0.14,0.045,0.015);
+  roundedBox(head,shell,0,0.17,0,1.26,1.06,1.02,0.1);
+  roundedBox(head,face,0,0.16,0.535,1.04,0.75,0.05,0.025);
+  for(const x of [-0.27,0.27]) roundedBox(head,cyan,x,0.2,0.585,0.17,0.13,0.04,0.015);
+  for(const side of [-1,1]){
    const arm=side<0?leftArm:rightArm,leg=side<0?leftLeg:rightLeg;
-   ball(head,trim,side*0.79,0.18,0,0.19,0.22,0.2);
-   ball(arm,shell,side*0.05,-0.24,0,0.23,0.31,0.23);
-   ball(arm,dark,side*0.05,-0.48,0.03,0.2,0.17,0.21);
-   roundedBox(leg,shell,0,-0.19,0,0.41,0.43,0.4,0.11);
-   ball(leg,dark,0,-0.4,0.13,0.24,0.12,0.31);
+   roundedBox(arm,shell,0,-0.26,0,0.34,0.51,0.39,0.07);
+   roundedBox(arm,dark,0,-0.51,0,0.3,0.15,0.34,0.04);
+   roundedBox(leg,shell,0,-0.2,0,0.39,0.44,0.43,0.06);
+   roundedBox(leg,dark,0,-0.43,0.1,0.41,0.14,0.48,0.04);
   }
  }else{
   const hoodie=mat(0x279a94),cuff=mat(0x1a7978),hair=mat(0x49312e),beanie=mat(0xf2b43e),white=mat(0xf7e8d5);
