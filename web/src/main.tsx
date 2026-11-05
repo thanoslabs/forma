@@ -4,7 +4,6 @@ import "./style.css";
 import "./office.css";
 import "./demo.css";
 import { Office } from "./Office";
-import { OfficeCharacters } from "./Characters3D";
 import { usePlayerMovement } from "./playerMovement";
 import { useSimulation } from "./useSimulation";
 import { OfficePanels } from "./OfficePanels";
@@ -92,8 +91,7 @@ function App() {
   return <div className="office-app">
     <div className="office-world" aria-label="Forma office workspace">
       <div className="office-world-stage">
-        <Office hideActorArt agents={state.agents} deskPositions={layout.desks} selectedId={selectedAgent} onSelect={setSelectedAgent} onOpenProjects={()=>setPanel("projects")} onDeselect={()=>setSelectedAgent(undefined)} onMove={(agentId,p)=>dispatch({type:"move",agentId,x:p.x,y:p.y})}/>
-        <OfficeCharacters agents={state.agents} playerState={playerState} selectedId={selectedAgent}/>
+        <Office agents={state.agents} playerState={playerState} deskPositions={layout.desks} selectedId={selectedAgent} onSelect={setSelectedAgent} onOpenProjects={()=>setPanel("projects")} onDeselect={()=>setSelectedAgent(undefined)} onMove={(agentId,p)=>dispatch({type:"move",agentId,x:p.x,y:p.y})}/>
         <SpeechBubbles bubbles={bubbles} playerPosition={playerState.position} agents={state.agents} onOpen={openChatMessage}/>
       </div>
     </div>

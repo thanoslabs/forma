@@ -7,7 +7,7 @@
 
 Forma is a self-hostable virtual office where people can observe, organize, and interact with software agents. Agent harnesses execute work, project providers remain authoritative for work items, and chat providers extend conversations into tools such as Slack or Discord.
 
-The repository currently includes a Go/PostgreSQL service, provider-neutral adapter contracts, and a React/TypeScript office prototype using PixiJS and Three.js.
+The repository currently includes a Go/PostgreSQL service, provider-neutral adapter contracts, and a React/TypeScript 2.5D office rendered in PixiJS.
 
 ## Quick start
 

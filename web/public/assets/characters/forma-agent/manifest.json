@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "image": "atlas.png",
+  "frameWidth": 300,
+  "frameHeight": 240,
+  "columns": ["southwest", "southeast", "northwest", "northeast"],
+  "rows": ["idle", "walkA", "walkB", "sit", "work"],
+  "framesPerSecond": 6,
+  "groundAnchor": { "x": 0.5, "y": 0.88 },
+  "headAnchor": { "x": 0.5, "y": 0.18 }
+}
