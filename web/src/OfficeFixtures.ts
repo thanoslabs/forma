@@ -46,27 +46,28 @@ export function makeProjectBoard(onOpen: () => void): Container {
  board.addChild(hit);
  return board;
 }
-export function makeWorkstations(positions:Position[]): Container {
- const layer = new Container();
+export function makeElevator(onOpen:()=>void):Container{
+ const elevator=new Container(),art=new Graphics();art.roundRect(772,105,74,172,8).fill("#596775").stroke({color:"#34414f",width:4});art.roundRect(780,115,58,151,4).fill("#b9c2c9");art.rect(808,115,3,151).fill("#6f7d88");art.roundRect(747,151,20,36,4).fill("#303c49");art.circle(757,162,4).fill("#a6e5c8");art.circle(757,177,4).fill("#e4bd73");elevator.addChild(art);const label=new Text({text:"ELEVATOR",style:{fontFamily:"sans-serif",fontSize:10,fontWeight:"bold",fill:"#eaf0f3"}});label.anchor.set(.5);label.position.set(809,96);elevator.addChild(label);const hit=new Graphics().roundRect(744,94,104,187,8).fill({color:0xffffff,alpha:.001});hit.eventMode="static";hit.cursor="pointer";hit.on("pointertap",event=>{event.stopPropagation();onOpen();});elevator.addChild(hit);return elevator;
+}
+export function makeWorkstations(positions:Position[]): Container[] {
+ const layers:Container[]=[];
  positions.forEach((p,index)=>{
-  const g=new Graphics();
-  // Contact shadow, angled tabletop, thick front apron and four visible legs.
-  g.ellipse(p.x,p.y+51,83,16).fill({color:"#4c3b32",alpha:.18});
-  for(const dx of [-51,49]) g.roundRect(p.x+dx,p.y+25,8,51,2).fill("#6b493a");
-  g.moveTo(p.x-70,p.y+2).lineTo(p.x+57,p.y+2).lineTo(p.x+72,p.y+27).lineTo(p.x-55,p.y+27).closePath().fill("#c9956d").stroke({color:"#9a6448",width:2});
-  g.moveTo(p.x-55,p.y+27).lineTo(p.x+72,p.y+27).lineTo(p.x+70,p.y+38).lineTo(p.x-57,p.y+38).closePath().fill("#a46d51");
+  const back=new Container(),front=new Container(),g=new Graphics(),fg=new Graphics();back.zIndex=p.y;front.zIndex=p.y+42;
+  // Furniture is calibrated against a roughly 92px character: 70px top, 45px floor height.
+  g.ellipse(p.x,p.y+52,68,13).fill({color:"#4c3b32",alpha:.16});
+  // Chair is a separate interaction object behind the desk foreground.
+  g.roundRect(p.x-21,p.y+42,42,34,9).fill("#617286").stroke({color:"#405064",width:2});
+  g.roundRect(p.x-24,p.y+67,48,12,6).fill("#506176");g.rect(p.x-3,p.y+78,6,18).fill("#435166");
+  for(const dx of [-16,16])g.circle(p.x+dx,p.y+97,5).fill("#293545");
+  for(const dx of [-43,43]) fg.roundRect(p.x+dx,p.y+23,7,43,2).fill("#6b493a");
+  g.moveTo(p.x-58,p.y+2).lineTo(p.x+48,p.y+2).lineTo(p.x+59,p.y+22).lineTo(p.x-47,p.y+22).closePath().fill("#c9956d").stroke({color:"#9a6448",width:2});
+  fg.moveTo(p.x-47,p.y+22).lineTo(p.x+59,p.y+22).lineTo(p.x+57,p.y+31).lineTo(p.x-49,p.y+31).closePath().fill("#a46d51");
   if(index%2===0) {
    // Open laptop, raised screen, hinge and keyboard deck.
-   g.roundRect(p.x-31,p.y-40,64,49,4).fill("#4c5965").stroke({color:"#29343e",width:3});
-   g.roundRect(p.x-27,p.y-36,56,40,2).fill("#88b8d0");
-   g.rect(p.x-24,p.y-31,49,6).fill("#d5e9f3");
-   g.roundRect(p.x-35,p.y+8,74,14,3).fill("#66747c");
-   for(let row=0;row<2;row++)for(let col=0;col<8;col++)g.roundRect(p.x-29+col*8,p.y+10+row*5,6,3,1).fill("#b6c2c9");
+   g.roundRect(p.x-27,p.y-34,56,40,4).fill("#4c5965").stroke({color:"#29343e",width:3});g.roundRect(p.x-23,p.y-30,48,32,2).fill("#88b8d0");g.rect(p.x-20,p.y-26,41,5).fill("#d5e9f3");g.roundRect(p.x-31,p.y+7,64,11,3).fill("#66747c");
   } else {
    // Monitor with stand, separate keyboard and mouse.
-   g.roundRect(p.x-37,p.y-51,78,51,4).fill("#343e4b").stroke({color:"#222b36",width:3});
-   g.roundRect(p.x-32,p.y-46,68,40,2).fill("#83b3ce");
-   g.roundRect(p.x-28,p.y-42,60,6,1).fill("#c6e2ed");
+   g.roundRect(p.x-31,p.y-43,64,43,4).fill("#343e4b").stroke({color:"#222b36",width:3});g.roundRect(p.x-27,p.y-39,56,34,2).fill("#83b3ce");g.roundRect(p.x-23,p.y-35,48,5,1).fill("#c6e2ed");
    g.rect(p.x-2,p.y,7,12).fill("#67717a");
    g.roundRect(p.x-14,p.y+11,32,5,2).fill("#67717a");
    g.roundRect(p.x-31,p.y+20,57,10,3).fill("#dce1df");
@@ -74,7 +75,7 @@ export function makeWorkstations(positions:Position[]): Container {
    g.ellipse(p.x+43,p.y+24,7,10).fill("#e1e7e4");
    g.moveTo(p.x+43,p.y+16).lineTo(p.x+43,p.y+24).stroke({color:"#9daab0",width:1});
   }
-  layer.addChild(g);
+  back.addChild(g);front.addChild(fg);layers.push(back,front);
  });
- return layer;
+ return layers;
 }

@@ -1,12 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { collidesWithDesk, inputVector, movePlayer, PLAYER_START } from "./playerMovement";
+import{describe,expect,it}from"vitest";
+import{availableChair,collidesWithDesk,inputVector,movePlayer,PLAYER_START}from"./playerMovement";
+import{createWorkstations}from"./workstations";
+import{streetBlockedTiles}from"./scenes";
+import{snapToGrid}from"./worldGrid";
 
-const desks=[{x:220,y:205}];
-describe("player controls",()=>{
- it("starts within the office",()=>{expect(PLAYER_START).toEqual({x:125,y:375});});
- it("normalizes diagonals to avoid faster diagonal movement",()=>{const v=inputVector(new Set(["w","d"]));expect(Math.hypot(v.x,v.y)).toBeCloseTo(1);expect(v.x).toBeGreaterThan(0);expect(v.y).toBeLessThan(0);});
+const desks=[snapToGrid({x:220,y:205})];
+describe("grid player controls",()=>{
+ it("starts on the office grid",()=>{expect(PLAYER_START).toEqual(snapToGrid(PLAYER_START));});
+ it("normalizes diagonals",()=>{const v=inputVector(new Set(["w","d"]));expect(Math.hypot(v.x,v.y)).toBeCloseTo(1);});
  it("supports arrow keys and opposite directions cancel",()=>{expect(inputVector(new Set(["arrowleft"]))).toEqual({x:-1,y:0});expect(inputVector(new Set(["a","d"]))).toEqual({x:0,y:0});});
- it("clamps movement at office boundaries",()=>{expect(movePlayer({x:72,y:95},-300,-300,[])).toEqual({x:22,y:26});expect(movePlayer({x:788,y:423},300,300,[])).toEqual({x:838,y:464});});
- it("does not enter desk collision rectangles",()=>{expect(collidesWithDesk({x:220,y:205},desks)).toBe(true);expect(movePlayer({x:220,y:270},0,-90,desks)).toEqual({x:220,y:270});});
- it("slides along desk edges",()=>{expect(movePlayer({x:120,y:205},90,30,desks)).toEqual({x:120,y:235});});
+ it("moves exactly one tile and stays within bounds",()=>{expect(movePlayer(PLAYER_START,1,0,[]).x-PLAYER_START.x).toBe(35);expect(movePlayer({x:17.5,y:17.5},-1,0,[])).toEqual({x:17.5,y:17.5});});
+ it("does not enter workstation cells",()=>{expect(collidesWithDesk(desks[0],desks)).toBe(true);const below=snapToGrid({x:220,y:250});expect(movePlayer(below,0,-1,desks)).toEqual(below);});
+ it("only exposes unreserved chairs",()=>{const station=createWorkstations(desks)[0];expect(availableChair(station.chair,desks,new Set())?.id).toBe(station.id);expect(availableChair(station.chair,desks,new Set([station.id]))).toBeUndefined();});
+ it("prevents stepping from the crosswalk into a traffic lane",()=>{const crosswalk={x:367.5,y:332.5};expect(movePlayer(crosswalk,-1,0,[],streetBlockedTiles())).toEqual(crosswalk);});
 });
