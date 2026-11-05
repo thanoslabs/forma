@@ -13,6 +13,7 @@ import (
 	formadb "github.com/thanoslabs/forma/db"
 	"github.com/thanoslabs/forma/internal/adapters/agents/mock"
 	"github.com/thanoslabs/forma/internal/httpapi"
+	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/realtime"
 	"github.com/thanoslabs/forma/internal/store/postgres"
 	"github.com/thanoslabs/forma/internal/turns"
@@ -41,8 +42,9 @@ func main() {
 	mux := http.NewServeMux()
 	store := postgres.New(pool)
 	live := realtime.New()
-	router := turns.NewRouter(store, store, turns.NewRegistry(mock.New()), live)
-	httpapi.New(store, store, live, router).Register(mux)
+	registry := turns.NewRegistry(mock.New())
+	router := turns.NewRouter(store, store, registry, live)
+	httpapi.New(store, store, live, router).WithAgentProjections(projections.NewAgentReader(store, registry)).Register(mux)
 	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
 		httpapi.NewMockAPI().Register(mux)
 	}

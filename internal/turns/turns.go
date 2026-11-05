@@ -42,6 +42,11 @@ func NewRegistry(adapters ...agents.Adapter) *Registry {
 	return registry
 }
 
+func (r *Registry) Adapter(id string) (agents.Adapter, bool) {
+	adapter, ok := r.adapters[id]
+	return adapter, ok
+}
+
 type Router struct {
 	connections workspaces.Repository
 	store       Store

@@ -18,6 +18,7 @@ import "./immersive.css";
 import { LayoutEditor } from "./LayoutEditor";
 import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
 import { ensureDefaultConversation, listConversationMessages, sendConversationMessage, watchConversationMessages, type ConversationMessage, type ConversationScope } from "./conversationApi";
+import {listWorkspaceAgents} from "./agentApi";
 
 type WorkspacePanel = "chat" | "agents" | "projects" | "activity" | "settings" | null;
 
@@ -54,6 +55,12 @@ function App() {
     }).catch(()=>{if(active&&!controller.signal.aborted){setChatStatus("local");setChatError("The Forma API is unavailable. Messages will stay in this browser session.");}});
     return()=>{active=false;controller.abort();stopWatching?.();};
   },[toChatMessage]);
+  React.useEffect(()=>{
+    if(!conversationScope)return;
+    const controller=new AbortController();
+    const refresh=()=>void listWorkspaceAgents(conversationScope.workspaceId,controller.signal).then(agents=>{if(agents.length)dispatch({type:"projectAgents",agents});}).catch(()=>{});
+    refresh();const timer=window.setInterval(refresh,5000);return()=>{controller.abort();window.clearInterval(timer);};
+  },[conversationScope,dispatch]);
   const sendChat=(body:string,mentions:LinkedMention[])=>{
     const requestId=globalThis.crypto?.randomUUID?.()??"request-"+Date.now();
     if(chatStatus==="local"||!conversationScope){
@@ -92,7 +99,7 @@ function App() {
     </div>
     <div className="office-hud">
       <div className="office-brand"><strong>forma<span>.</span></strong><small>YOUR AGENT WORKSPACE</small></div>
-      <div className="office-status"><span className="office-status-dot"/> Demo workspace · simulated activity</div>
+      <div className="office-status"><span className="office-status-dot"/> {state.source==="live"?"Workspace · live agent projections":"Demo workspace · simulated activity"}</div>
       <nav className="office-dock" aria-label="Workspace tools">
         {(["chat","agents","projects","activity","settings"] as const).map(item=><button type="button" key={item} aria-pressed={panel===item} className={panel===item?"active":""} onClick={()=>togglePanel(item)}>{item==="chat"?"◉":item==="agents"?"♟":item==="projects"?"▦":item==="activity"?"◷":"⚙"}<span>{item[0].toUpperCase()+item.slice(1)}</span></button>)}
       </nav>

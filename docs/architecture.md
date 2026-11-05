@@ -33,6 +33,8 @@ Conversation WebSockets replay the persisted message timeline before emitting in
 
 Persisted message writes require an `Idempotency-Key`. An agent mention is dispatchable only when it includes both the provider agent ID and its Forma connection ID; a display-name mention alone is inert. Forma records an `agent_turn` and `agent_command` before invoking an input-capable adapter, then persists the correlated reply or failure. Replaying the same message key returns the original message without invoking the adapter again.
 
+The workspace agent roster is a live, connection-scoped projection from configured agent adapters. Provider IDs are always paired with a connection ID, and the browser periodically refreshes this projection. When no agent connection is configured, the local office simulation remains available as a deliberate demo fallback.
+
 ## Security
 Credentials are encrypted at rest and never sent to the browser. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
 
