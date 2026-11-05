@@ -11,7 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	formadb "github.com/thanoslabs/forma/db"
+	"github.com/thanoslabs/forma/internal/adapters/agents"
 	"github.com/thanoslabs/forma/internal/adapters/agents/mock"
+	"github.com/thanoslabs/forma/internal/adapters/agents/paseo"
 	"github.com/thanoslabs/forma/internal/httpapi"
 	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/realtime"
@@ -42,7 +44,15 @@ func main() {
 	mux := http.NewServeMux()
 	store := postgres.New(pool)
 	live := realtime.New()
-	registry := turns.NewRegistry(mock.New())
+	agentAdapters := []agents.Adapter{mock.New()}
+	if paseoURL := os.Getenv("FORMA_PASEO_URL"); paseoURL != "" {
+		provider, err := paseo.New(paseo.Config{URL: paseoURL, Password: os.Getenv("FORMA_PASEO_PASSWORD")})
+		if err != nil {
+			log.Fatal(err)
+		}
+		agentAdapters = append(agentAdapters, provider)
+	}
+	registry := turns.NewRegistry(agentAdapters...)
 	router := turns.NewRouter(store, store, registry, live)
 	httpapi.New(store, store, live, router).WithAgentProjections(projections.NewAgentReader(store, registry)).Register(mux)
 	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
