@@ -38,6 +38,8 @@ The workspace agent roster is a live, connection-scoped projection from configur
 ## Security
 Credentials are encrypted at rest with authenticated encryption, bound to their connection ID, and never sent to the browser. API bearer checks use constant-time comparison; health and readiness probes remain separately accessible. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
 
+Production mode validates its security boundary before opening a listener: database, API token, credential key, and trusted browser origins are mandatory, while demo routes are prohibited. Exact origin checks cover HTTP and WebSocket requests. Responses carry request correlation and hardened browser headers; server timeouts and graceful termination bound resource use and deployment disruption.
+
 ## Initial stack
 Go + pgx + SQL migrations; React + TypeScript + Vite; PixiJS; PostgreSQL; Docker Compose for development; OCI and Helm for deployment. CI validates Go, frontend, migrations and adapter conformance fixtures. Avoid an extra queue or distributed scheduler until there is a measured need.
 
