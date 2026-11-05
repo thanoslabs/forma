@@ -1,4 +1,5 @@
 import { Assets, Rectangle, Sprite, Texture } from "pixi.js";
+import{publicAsset}from"./publicAsset";
 
 export type CharacterDirection="southwest"|"southeast"|"northwest"|"northeast";
 export type CharacterAnimation="idle"|"walk"|"sit"|"work";
@@ -10,7 +11,7 @@ const rows={idle:0,walkA:1,walkB:2,sit:3,work:4} as const;
 let texturesPromise:Promise<Texture[][]>|undefined,loadedTextures:Texture[][]|undefined;
 
 function loadTextures():Promise<Texture[][]>{
- if(!texturesPromise)texturesPromise=Assets.load("/assets/characters/forma-agent/atlas.png").then(source=>loadedTextures=Array.from({length:5},(_,row)=>Array.from({length:4},(_,column)=>new Texture({source,frame:new Rectangle(column*FRAME_WIDTH,row*FRAME_HEIGHT,FRAME_WIDTH,FRAME_HEIGHT)}))));
+ if(!texturesPromise)texturesPromise=Assets.load(publicAsset("assets/characters/forma-agent/atlas.png")).then(source=>loadedTextures=Array.from({length:5},(_,row)=>Array.from({length:4},(_,column)=>new Texture({source,frame:new Rectangle(column*FRAME_WIDTH,row*FRAME_HEIGHT,FRAME_WIDTH,FRAME_HEIGHT)}))));
  return texturesPromise;
 }
 

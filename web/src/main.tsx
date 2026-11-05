@@ -19,7 +19,7 @@ import { LayoutEditor } from "./LayoutEditor";
 import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
 import { ensureDefaultConversation,ensureWorkspaceConversation,listWorkspaces, listConversationMessages, sendConversationMessage, watchConversationMessages, type ConversationMessage, type ConversationScope,type Workspace } from "./conversationApi";
 import {listWorkspaceAgents} from "./agentApi";
-import{ELEVATOR_TILE,sceneSpawn,STREET_SCENE,streetBlockedTiles,workspaceScenes}from"./scenes";
+import{DEMO_WORKSPACES,ELEVATOR_TILE,sceneSpawn,STREET_SCENE,streetBlockedTiles,workspaceScenes}from"./scenes";
 import{tileKey,worldToTile}from"./worldGrid";
 
 type WorkspacePanel = "chat" | "agents" | "projects" | "activity" | "settings"|"elevator" | null;
@@ -52,7 +52,7 @@ function App() {
   React.useEffect(()=>()=>{timers.current.forEach(clearTimeout);timers.current.clear();},[]);
   const toChatMessage=React.useCallback((message:ConversationMessage):ChatMessage=>({id:message.id,author:message.author.name,speakerId:message.author.kind==="agent"?message.author.id:"player",body:message.body,mentions:message.mentions,time:new Date(message.occurredAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}),[]);
   React.useEffect(()=>{
-    const controller=new AbortController();void ensureDefaultConversation(controller.signal).then(async scope=>{const found=await listWorkspaces(controller.signal);setWorkspaces(found);setActiveWorkspaceId(scope.workspaceId);setActiveSceneId(`workspace:${scope.workspaceId}`);}).catch(()=>{if(!controller.signal.aborted){setChatStatus("local");setChatError("The Forma API is unavailable. Messages will stay in this browser session.");}});return()=>controller.abort();
+    const controller=new AbortController();void ensureDefaultConversation(controller.signal).then(async scope=>{const found=await listWorkspaces(controller.signal);setWorkspaces(found);setActiveWorkspaceId(scope.workspaceId);setActiveSceneId(`workspace:${scope.workspaceId}`);}).catch(()=>{if(!controller.signal.aborted){const first=DEMO_WORKSPACES[0];setWorkspaces(DEMO_WORKSPACES);setActiveWorkspaceId(first.id);setActiveSceneId(`workspace:${first.id}`);setChatStatus("local");setChatError("Demo mode: the Forma API is unavailable, so messages stay in this browser session.");}});return()=>controller.abort();
   },[]);
   React.useEffect(()=>{
     if(!activeWorkspaceId)return;
@@ -72,7 +72,7 @@ function App() {
     refresh();const timer=window.setInterval(refresh,5000);return()=>{controller.abort();window.clearInterval(timer);};
   },[conversationScope,dispatch]);
   React.useEffect(()=>{if(activeScene?.kind==="office"&&tileKey(worldToTile(playerState.position))===tileKey(ELEVATOR_TILE)&&!playerState.seated)setPanel("elevator");},[activeScene?.kind,playerState.position,playerState.seated]);
-  const selectFloor=(workspaceId:string)=>{setActiveSceneId(`workspace:${workspaceId}`);setActiveWorkspaceId(workspaceId);setConversationScope(undefined);setSelectedAgent(undefined);setMessages([]);setBubbles([]);dispatch({type:"projectAgents",agents:[]});setChatStatus("connecting");setPanel(null);};
+  const selectFloor=(workspaceId:string)=>{setActiveSceneId(`workspace:${workspaceId}`);setActiveWorkspaceId(workspaceId);setConversationScope(undefined);setSelectedAgent(undefined);setMessages([]);setBubbles([]);if(chatStatus!=="local"){dispatch({type:"projectAgents",agents:[]});setChatStatus("connecting");}setPanel(null);};
   const selectStreet=()=>{setActiveSceneId(STREET_SCENE.id);setSelectedAgent(undefined);setBubbles([]);setPanel(null);};
   const sendChat=(body:string,mentions:LinkedMention[])=>{
     const requestId=globalThis.crypto?.randomUUID?.()??"request-"+Date.now();
