@@ -1,5 +1,7 @@
 import{describe,expect,it}from"vitest";
-import{collidesWithDesk,inputVector,movePlayer,PLAYER_START}from"./playerMovement";
+import{availableChair,collidesWithDesk,inputVector,movePlayer,PLAYER_START}from"./playerMovement";
+import{createWorkstations}from"./workstations";
+import{streetBlockedTiles}from"./scenes";
 import{snapToGrid}from"./worldGrid";
 
 const desks=[snapToGrid({x:220,y:205})];
@@ -9,4 +11,6 @@ describe("grid player controls",()=>{
  it("supports arrow keys and opposite directions cancel",()=>{expect(inputVector(new Set(["arrowleft"]))).toEqual({x:-1,y:0});expect(inputVector(new Set(["a","d"]))).toEqual({x:0,y:0});});
  it("moves exactly one tile and stays within bounds",()=>{expect(movePlayer(PLAYER_START,1,0,[]).x-PLAYER_START.x).toBe(35);expect(movePlayer({x:17.5,y:17.5},-1,0,[])).toEqual({x:17.5,y:17.5});});
  it("does not enter workstation cells",()=>{expect(collidesWithDesk(desks[0],desks)).toBe(true);const below=snapToGrid({x:220,y:250});expect(movePlayer(below,0,-1,desks)).toEqual(below);});
+ it("only exposes unreserved chairs",()=>{const station=createWorkstations(desks)[0];expect(availableChair(station.chair,desks,new Set())?.id).toBe(station.id);expect(availableChair(station.chair,desks,new Set([station.id]))).toBeUndefined();});
+ it("prevents stepping from the crosswalk into a traffic lane",()=>{const crosswalk={x:367.5,y:332.5};expect(movePlayer(crosswalk,-1,0,[],streetBlockedTiles())).toEqual(crosswalk);});
 });
