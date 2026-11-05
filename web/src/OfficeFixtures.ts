@@ -6,7 +6,7 @@ export function makeWindows(): Container {
  const layer = new Container();
  for (const x of [255, 535]) {
   const sky = new Graphics()
-   .roundRect(x, 18, 210, 104, 8).fill("#89c8ee")
+   .rect(x, 18, 210, 104).fill("#69a9d2")
    .rect(x + 3, 69, 204, 48).fill("#a5d7ee");
   // Layered clouds and distant silhouettes provide a sky texture without network assets.
   for (const [dx,dy,s] of [[28,29,1],[125,46,.8],[166,23,.55]] as const) {
@@ -15,10 +15,10 @@ export function makeWindows(): Container {
    sky.ellipse(x+dx-15*s,18+dy+2*s,16*s,7*s).fill({color:"#e6f6ff",alpha:.8});
   }
   sky.moveTo(x+3,115).lineTo(x+3,101).lineTo(x+43,87).lineTo(x+85,105).lineTo(x+130,90).lineTo(x+207,106).lineTo(x+207,115).closePath().fill("#9ab9b8");
-  sky.roundRect(x,18,210,104,8).stroke({color:"#f9f8ef",width:8});
+  sky.rect(x,18,210,104).stroke({color:"#423b5c",width:8});
   sky.rect(x+102,20,6,100).fill("#f8f7f1");
   sky.rect(x+3,69,204,5).fill("#f8f7f1");
-  sky.roundRect(x-6,122,222,8,2).fill("#bca58b");
+  sky.rect(x-6,122,222,8).fill("#796584");
   layer.addChild(sky);
  }
  return layer;
@@ -27,8 +27,8 @@ export function makeProjectBoard(onOpen: () => void): Container {
  const board = new Container();
  const art = new Graphics();
  art.ellipse(111,189,91,12).fill({color:"#625848",alpha:.18});
- art.roundRect(33,49,158,111,7).fill("#8a969e");
- art.roundRect(39,55,146,98,4).fill("#f9faf6").stroke({color:"#c5cdd1",width:3});
+ art.rect(33,49,158,111).fill("#554c70");
+ art.rect(39,55,146,98).fill("#f7f1df").stroke({color:"#302b49",width:3});
  art.rect(48,65,128,2).fill("#dce3e7");
  art.roundRect(54,81,34,20,3).fill("#d4e4fa");
  art.roundRect(94,81,34,20,3).fill("#e7dcf7");
@@ -56,10 +56,10 @@ export function makeWorkstations(positions:Position[]): Container[] {
   // Furniture is calibrated against a roughly 92px character: 70px top, 45px floor height.
   g.ellipse(p.x,p.y+52,68,13).fill({color:"#4c3b32",alpha:.16});
   // Chair is a separate interaction object behind the desk foreground.
-  g.roundRect(p.x-21,p.y+42,42,34,9).fill("#617286").stroke({color:"#405064",width:2});
-  g.roundRect(p.x-24,p.y+67,48,12,6).fill("#506176");g.rect(p.x-3,p.y+78,6,18).fill("#435166");
+  g.rect(p.x-21,p.y+42,42,34).fill("#59627b").stroke({color:"#302f49",width:3});
+  g.rect(p.x-24,p.y+67,48,12).fill("#444a68");g.rect(p.x-3,p.y+78,6,18).fill("#343851");
   for(const dx of [-16,16])g.circle(p.x+dx,p.y+97,5).fill("#293545");
-  for(const dx of [-43,43]) fg.roundRect(p.x+dx,p.y+23,7,43,2).fill("#6b493a");
+  for(const dx of [-43,43]) fg.rect(p.x+dx,p.y+23,8,43).fill("#694734");
   g.moveTo(p.x-58,p.y+2).lineTo(p.x+48,p.y+2).lineTo(p.x+59,p.y+22).lineTo(p.x-47,p.y+22).closePath().fill("#c9956d").stroke({color:"#9a6448",width:2});
   fg.moveTo(p.x-47,p.y+22).lineTo(p.x+59,p.y+22).lineTo(p.x+57,p.y+31).lineTo(p.x-49,p.y+31).closePath().fill("#a46d51");
   if(index%2===0) {

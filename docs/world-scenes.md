@@ -16,7 +16,7 @@ Office furniture contributes blocked cells, chair cells, and approach cells. Str
 
 The initial assets are original, replaceable production placeholders generated with OpenAI's built-in image generation tool:
 
-- `web/public/assets/characters/forma-agent/atlas.png` is a transparent 4×5 directional character atlas covering idle, walk, seated, and seated-work poses.
+- `web/public/assets/characters/forma-agent/atlas.png` and the two `forma-player-*` atlases are transparent 1200×1500 directional 4×5 sprite sheets covering idle, walk, seated, and seated-work poses.
 - `web/public/assets/scenes/street.png` is an 860×490 New York-inspired street, park, and office entrance background.
 
-Gameplay geometry and interaction targets are code-defined rather than baked into the images. Replacement art should retain the manifest frame contract and scene dimensions or update the corresponding manifest and geometry together.
+Gameplay geometry and interaction targets are code-defined rather than baked into the images. Pixel textures use nearest-neighbor sampling, and replacement art should retain the manifest frame contract and scene dimensions or update the corresponding manifest and geometry together.
