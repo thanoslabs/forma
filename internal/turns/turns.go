@@ -26,16 +26,22 @@ type Turn struct {
 
 type Store interface {
 	StartTurn(context.Context, Turn) (Turn, bool, error)
+	AcceptTurn(context.Context, Turn) error
 	CompleteTurn(context.Context, Turn, string, time.Time) (conversations.Message, error)
 	FailTurn(context.Context, Turn, error) error
 }
 
 type Publisher interface{ Publish(conversations.Message) }
 
-type Registry struct{ adapters map[string]agents.Adapter }
+type AdapterFactory func(context.Context, workspaces.Connection) (agents.Adapter, error)
+
+type Registry struct {
+	adapters  map[string]agents.Adapter
+	factories map[string]AdapterFactory
+}
 
 func NewRegistry(adapters ...agents.Adapter) *Registry {
-	registry := &Registry{adapters: make(map[string]agents.Adapter)}
+	registry := &Registry{adapters: make(map[string]agents.Adapter), factories: make(map[string]AdapterFactory)}
 	for _, adapter := range adapters {
 		registry.adapters[adapter.ID()] = adapter
 	}
@@ -45,6 +51,19 @@ func NewRegistry(adapters ...agents.Adapter) *Registry {
 func (r *Registry) Adapter(id string) (agents.Adapter, bool) {
 	adapter, ok := r.adapters[id]
 	return adapter, ok
+}
+
+func (r *Registry) RegisterFactory(id string, factory AdapterFactory) { r.factories[id] = factory }
+
+func (r *Registry) Resolve(ctx context.Context, connection workspaces.Connection) (agents.Adapter, error) {
+	if factory := r.factories[connection.AdapterID]; factory != nil && connection.EndpointURL != "" {
+		return factory(ctx, connection)
+	}
+	adapter, ok := r.Adapter(connection.AdapterID)
+	if !ok {
+		return nil, fmt.Errorf("adapter %s is unavailable", connection.AdapterID)
+	}
+	return adapter, nil
 }
 
 type Router struct {
@@ -85,14 +104,29 @@ func (r *Router) routeMention(ctx context.Context, workspaceID, requestKey strin
 	if connection.ProviderType != "agent" {
 		return fmt.Errorf("connection %s is not an agent provider", connection.ID)
 	}
-	adapter := r.registry.adapters[connection.AdapterID]
-	sender, ok := adapter.(agents.InputSender)
-	if !ok || !hasCapability(adapter, agents.Input) {
+	adapter, err := r.registry.Resolve(ctx, connection)
+	if err != nil {
+		return err
+	}
+	if !hasCapability(adapter, agents.Input) {
 		return fmt.Errorf("adapter %s: %w", connection.AdapterID, agents.ErrUnsupported)
 	}
 	turn, created, err := r.store.StartTurn(ctx, Turn{WorkspaceID: workspaceID, ConnectionID: connection.ID, ConversationID: message.ConversationID, RequestMessageID: message.ID, AgentID: mention.ID, AgentName: mention.Name, IdempotencyKey: requestKey + ":" + connection.ID + ":" + mention.ID})
 	if err != nil || !created {
 		return err
+	}
+	if sender, ok := adapter.(agents.AsyncInputSender); ok {
+		if err := sender.SendInputAsync(ctx, mention.ID, message.Body, turn.IdempotencyKey); err != nil {
+			if storeErr := r.store.FailTurn(ctx, turn, err); storeErr != nil {
+				return errors.Join(err, storeErr)
+			}
+			return err
+		}
+		return r.store.AcceptTurn(ctx, turn)
+	}
+	sender, ok := adapter.(agents.InputSender)
+	if !ok {
+		return fmt.Errorf("adapter %s: %w", connection.AdapterID, agents.ErrUnsupported)
 	}
 	reply, err := sender.SendInput(ctx, mention.ID, message.Body, turn.IdempotencyKey)
 	if err != nil {

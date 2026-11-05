@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	formadb "github.com/thanoslabs/forma/db"
 	"github.com/thanoslabs/forma/internal/conversations"
+	"github.com/thanoslabs/forma/internal/secrets"
 	"github.com/thanoslabs/forma/internal/workspaces"
 )
 
@@ -27,12 +29,28 @@ func TestWorkspaceConversationRoundTrip(t *testing.T) {
 	if err := formadb.MigrateUp(ctx, pool); err != nil {
 		t.Fatal(err)
 	}
-	store := New(pool)
+	cipher, err := secrets.New(bytes.Repeat([]byte{3}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := NewWithCipher(pool, cipher)
 	workspaceID := newUUID()
 	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), "DELETE FROM workspaces WHERE id=$1", workspaceID) })
 	workspace, err := store.CreateWorkspace(ctx, workspaces.Workspace{ID: workspaceID, Name: "Integration"})
 	if err != nil || workspace.CreatedAt.IsZero() {
 		t.Fatalf("workspace: %#v %v", workspace, err)
+	}
+	connectionID := newUUID()
+	if _, err := store.CreateConnection(ctx, workspaces.Connection{ID: connectionID, WorkspaceID: workspaceID, AdapterID: "mock", ProviderType: "agent", DisplayName: "Mock", EndpointURL: "wss://example.test", Credential: "provider-secret"}); err != nil {
+		t.Fatal(err)
+	}
+	connection, err := store.GetConnection(ctx, workspaceID, connectionID)
+	if err != nil || connection.Credential != "provider-secret" {
+		t.Fatalf("connection=%#v err=%v", connection, err)
+	}
+	var storedCredential string
+	if err := pool.QueryRow(ctx, "SELECT credential_ciphertext::text FROM connections WHERE id=$1", connectionID).Scan(&storedCredential); err != nil || storedCredential == "provider-secret" {
+		t.Fatalf("credential was not encrypted: %q %v", storedCredential, err)
 	}
 	conversationID := newUUID()
 	conversation, err := store.CreateConversation(ctx, conversations.Conversation{ID: conversationID, WorkspaceID: workspaceID, Title: "Office"})

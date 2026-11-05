@@ -52,6 +52,7 @@ func (s *turnStore) CompleteTurn(_ context.Context, turn Turn, body string, occu
 	s.completed = append(s.completed, message)
 	return message, nil
 }
+func (s *turnStore) AcceptTurn(_ context.Context, _ Turn) error          { return nil }
 func (s *turnStore) FailTurn(_ context.Context, _ Turn, err error) error { s.failed = err; return nil }
 
 type publisher struct{ messages []conversations.Message }

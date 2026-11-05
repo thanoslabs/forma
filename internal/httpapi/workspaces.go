@@ -121,6 +121,8 @@ func (a *API) createConnection(w http.ResponseWriter, r *http.Request) {
 		AdapterID    string `json:"adapterId"`
 		ProviderType string `json:"providerType"`
 		DisplayName  string `json:"displayName"`
+		EndpointURL  string `json:"endpointUrl"`
+		Credential   string `json:"credential"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
@@ -128,11 +130,12 @@ func (a *API) createConnection(w http.ResponseWriter, r *http.Request) {
 	request.AdapterID = strings.TrimSpace(request.AdapterID)
 	request.ProviderType = strings.TrimSpace(request.ProviderType)
 	request.DisplayName = strings.TrimSpace(request.DisplayName)
-	if request.AdapterID == "" || len(request.AdapterID) > 120 || request.DisplayName == "" || len(request.DisplayName) > 120 || !validProviderType(request.ProviderType) {
+	request.EndpointURL = strings.TrimSpace(request.EndpointURL)
+	if request.AdapterID == "" || len(request.AdapterID) > 120 || request.DisplayName == "" || len(request.DisplayName) > 120 || len(request.EndpointURL) > 2048 || len(request.Credential) > 16384 || !validProviderType(request.ProviderType) {
 		http.Error(w, "invalid connection metadata", http.StatusBadRequest)
 		return
 	}
-	connection, err := a.workspaces.CreateConnection(r.Context(), workspaces.Connection{ID: newID(), WorkspaceID: r.PathValue("workspaceID"), AdapterID: request.AdapterID, ProviderType: request.ProviderType, DisplayName: request.DisplayName})
+	connection, err := a.workspaces.CreateConnection(r.Context(), workspaces.Connection{ID: newID(), WorkspaceID: r.PathValue("workspaceID"), AdapterID: request.AdapterID, ProviderType: request.ProviderType, DisplayName: request.DisplayName, EndpointURL: request.EndpointURL, Credential: request.Credential})
 	if errors.Is(err, workspaces.ErrNotFound) {
 		http.NotFound(w, r)
 		return

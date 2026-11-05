@@ -27,7 +27,12 @@ func (repository) CreateWorkspace(context.Context, workspaces.Workspace) (worksp
 func (repository) CreateConnection(context.Context, workspaces.Connection) (workspaces.Connection, error) {
 	return workspaces.Connection{}, nil
 }
-func (repository) GetConnection(context.Context, string, string) (workspaces.Connection, error) {
+func (r repository) GetConnection(_ context.Context, workspaceID, connectionID string) (workspaces.Connection, error) {
+	for _, connection := range r.connections {
+		if connection.WorkspaceID == workspaceID && connection.ID == connectionID {
+			return connection, nil
+		}
+	}
 	return workspaces.Connection{}, workspaces.ErrNotFound
 }
 
