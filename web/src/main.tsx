@@ -59,7 +59,7 @@ function App() {
   return <div className="office-app">
     <div className="office-world" aria-label="Forma office workspace">
       <div className="office-world-stage">
-        <Office hideActorArt agents={state.agents} deskPositions={layout.desks} selectedId={selectedAgent} onSelect={id=>{setSelectedAgent(id);setPanel("agents");}} onDeselect={()=>setSelectedAgent(undefined)} onMove={(agentId,p)=>dispatch({type:"move",agentId,x:p.x,y:p.y})}/>
+        <Office hideActorArt agents={state.agents} deskPositions={layout.desks} selectedId={selectedAgent} onSelect={setSelectedAgent} onOpenProjects={()=>setPanel("projects")} onDeselect={()=>setSelectedAgent(undefined)} onMove={(agentId,p)=>dispatch({type:"move",agentId,x:p.x,y:p.y})}/>
         <OfficeCharacters agents={state.agents} playerState={playerState} selectedId={selectedAgent}/>
         <SpeechBubbles bubbles={bubbles} playerPosition={playerState.position} agents={state.agents} onOpen={openChatMessage}/>
       </div>
@@ -70,7 +70,7 @@ function App() {
       <nav className="office-dock" aria-label="Workspace tools">
         {(["chat","agents","projects","activity","settings"] as const).map(item=><button type="button" key={item} aria-pressed={panel===item} className={panel===item?"active":""} onClick={()=>togglePanel(item)}>{item==="chat"?"◉":item==="agents"?"♟":item==="projects"?"▦":item==="activity"?"◷":"⚙"}<span>{item[0].toUpperCase()+item.slice(1)}</span></button>)}
       </nav>
-      <div className="office-help">WASD / arrows to move <span>·</span> Click an agent to inspect <span>·</span> Esc to close</div>
+      <div className="office-help">WASD / arrows to move <span>·</span> Click to select · Drag agents to move · Click project board <span>·</span> Esc to close</div>
     </div>
     {panel&&<div className="office-drawer" role="region" aria-label={panel+" panel"}>
       <div className="office-drawer-head"><div><small>WORKSPACE</small><h2>{panel[0].toUpperCase()+panel.slice(1)}</h2></div><button type="button" onClick={()=>setPanel(null)} aria-label="Close panel">×</button></div>
