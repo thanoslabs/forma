@@ -3,6 +3,7 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 import { makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
 import {createCharacterSprite,directionFromDelta,directionFromFacing,preloadCharacterSprites,type CharacterDirection,type CharacterSprite} from "./characterSprites";
 import type {PlayerState} from "./playerMovement";
+import{snapToGrid}from"./worldGrid";
 
 export type Position = { x: number; y: number };
 export const desks: Position[] = [{ x: 220, y: 205 }, { x: 430, y: 205 }, { x: 640, y: 205 }];
@@ -55,7 +56,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
    app.stage.eventMode = "static";
    app.stage.on("globalpointermove", e => {
     if (!drag) return;
-    const point = clampPosition(e.getLocalPosition(app.stage));
+   const point = snapToGrid(clampPosition(e.getLocalPosition(app.stage)));
     if (Math.hypot(point.x - drag.start.x, point.y - drag.start.y) > 5) drag.moved = true;
     if (drag.moved) {
      const actor = actors.get(drag.id);
@@ -69,7 +70,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
    await preloadCharacterSprites();
    const furniture = new Container(); app.stage.addChild(furniture);
    const characters=new Container();characters.sortableChildren=true;app.stage.addChild(characters);
-   const playerCharacter=createCharacterSprite();const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);characters.addChild(playerNode);
+   const playerCharacter=createCharacterSprite();const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);characters.addChild(playerNode);let renderedPlayer={...live.current.playerState.position};
    let deskKey = "";
    const drawFurniture = (positions: Position[]) => { furniture.removeChildren().forEach(child => child.destroy({children:true})); furniture.addChild(makeWorkstations(positions)); };
    drawFurniture(live.current.deskPositions);
@@ -103,7 +104,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
      actor.character.setPose(moving?"walk":a.status==="working"?"work":"idle",actor.direction,app.ticker.lastTime/1000);
      actor.label.style.fill = a.status === "working" ? "#275c50" : a.status === "blocked" ? "#a04640" : "#28384a";
     }
-    const ps=live.current.playerState;playerNode.position.set(ps.position.x,ps.position.y);playerNode.zIndex=ps.position.y;playerCharacter.setPose(ps.moving?"walk":"idle",directionFromFacing(ps.facing),app.ticker.lastTime/1000);
+    const ps=live.current.playerState;renderedPlayer=walkToward(renderedPlayer,ps.position,Math.min(14,4*ticker.deltaTime));const playerMoving=Math.hypot(renderedPlayer.x-ps.position.x,renderedPlayer.y-ps.position.y)>.2;playerNode.position.set(renderedPlayer.x,renderedPlayer.y);playerNode.zIndex=renderedPlayer.y;playerCharacter.setPose(playerMoving?"walk":"idle",directionFromFacing(ps.facing),app.ticker.lastTime/1000);
     for (const [id, actor] of actors) if (!incoming.some(a => a.id === id)) { actor.node.destroy(); actor.label.destroy(); actors.delete(id); }
    });
   };
