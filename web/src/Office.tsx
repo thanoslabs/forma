@@ -26,10 +26,23 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
   let disposed = false;
   const actors = new Map<string, { node: Container; label: Text; position: Position; target: Position; source: Position }>();
   let activeId: string | undefined;
+  let observerCleanup: (() => void) | undefined;
   const init = async () => {
    await app.init({ width: 860, height: 490, background: "#c4e5ed", antialias: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
    if (disposed) { app.destroy(true); return; }
    element.appendChild(app.canvas);
+   // The Pixi world and Three.js overlay must occupy the same actual viewport.
+   // Keep simulation coordinates logical (860×490), scaling the stage on resize.
+   const resize = () => {
+    const width = Math.max(1, element.clientWidth);
+    const height = Math.max(1, element.clientHeight);
+    app.renderer.resize(width, height);
+    app.stage.scale.set(width / 860, height / 490);
+   };
+   const observer = new ResizeObserver(resize);
+   observer.observe(element);
+   observerCleanup = () => observer.disconnect();
+   resize();
    const room = new Graphics().rect(0, 0, 860, 490).fill("#f5dfb6");
    room.eventMode = "static";
    room.cursor = "crosshair";
@@ -51,7 +64,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
      let actor = actors.get(a.id);
      if (!actor) {
       const node = new Container();
-      node.addChild(new Graphics().ellipse(0, 0, 26, 32).fill(a.color ?? 0x7e70cf).ellipse(-9, -8, 4, 6).fill(0xffffff).ellipse(9, -8, 4, 6).fill(0xffffff).ellipse(-9, -8, 2, 3).fill(0x25384d).ellipse(9, -8, 2, 3).fill(0x25384d).ellipse(0, 5, 13, 7).fill(0xe5ba67));
+      node.addChild(new Graphics().ellipse(0, 0, 38, 43).fill(a.color ?? 0x7e70cf).ellipse(-9, -8, 4, 6).fill(0xffffff).ellipse(9, -8, 4, 6).fill(0xffffff).ellipse(-9, -8, 2, 3).fill(0x25384d).ellipse(9, -8, 2, 3).fill(0x25384d).ellipse(0, 5, 13, 7).fill(0xe5ba67));
       node.eventMode = "static"; node.cursor = "pointer";
       node.on("pointertap", e => { e.stopPropagation(); live.current.onSelect?.(a.id); });
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
@@ -73,7 +86,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
    });
   };
   void init();
-  return () => { disposed = true; if (app.renderer) app.destroy(true); };
+  return () => { disposed = true; observerCleanup?.(); if (app.renderer) app.destroy(true); };
  }, []);
  return <div ref={host} className="office-canvas" aria-label="Interactive illustrated office. Select an agent and click the floor to move." />;
 }
