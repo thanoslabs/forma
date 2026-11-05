@@ -7,18 +7,26 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/thanoslabs/forma/internal/conversations"
+	"github.com/thanoslabs/forma/internal/realtime"
 	"github.com/thanoslabs/forma/internal/workspaces"
 )
 
 type API struct {
 	workspaces    workspaces.Repository
 	conversations conversations.Repository
+	live          *realtime.Broker
 }
 
-func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository) *API {
-	return &API{workspaces: workspaceRepository, conversations: conversationRepository}
+const writeTimeout = 10 * time.Second
+
+func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository, live *realtime.Broker) *API {
+	if live == nil {
+		live = realtime.New()
+	}
+	return &API{workspaces: workspaceRepository, conversations: conversationRepository, live: live}
 }
 
 func (a *API) Register(mux *http.ServeMux) {

@@ -96,7 +96,7 @@ func (m *memoryWorkspaceRepository) CreateConnection(_ context.Context, connecti
 func TestWorkspaceAPI(t *testing.T) {
 	repository := &memoryWorkspaceRepository{}
 	mux := http.NewServeMux()
-	New(repository, repository).Register(mux)
+	New(repository, repository, nil).Register(mux)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces", bytes.NewBufferString(`{"name":"Forma"}`))
 	request.Header.Set("Content-Type", "application/json")
@@ -129,7 +129,7 @@ func TestWorkspaceAPI(t *testing.T) {
 func TestWorkspaceAPIRejectsInvalidConnection(t *testing.T) {
 	mux := http.NewServeMux()
 	repository := &memoryWorkspaceRepository{}
-	New(repository, repository).Register(mux)
+	New(repository, repository, nil).Register(mux)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/missing/connections", bytes.NewBufferString(`{"adapterId":"mock","providerType":"unknown","displayName":"Mock"}`))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()

@@ -13,7 +13,7 @@ import (
 func TestPersistedConversationAPI(t *testing.T) {
 	repository := &memoryWorkspaceRepository{workspaces: []workspaces.Workspace{{ID: "workspace-1", Name: "Forma"}}}
 	mux := http.NewServeMux()
-	New(repository, repository).Register(mux)
+	New(repository, repository, nil).Register(mux)
 	request := httptest.NewRequest("POST", "/api/v1/workspaces/workspace-1/conversations", bytes.NewBufferString(`{"title":"Office"}`))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()

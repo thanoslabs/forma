@@ -14,6 +14,7 @@ func (a *API) registerConversations(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/conversations", a.createConversation)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/conversations/{conversationID}/messages", a.listConversationMessages)
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/conversations/{conversationID}/messages", a.createConversationMessage)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/conversations/{conversationID}/messages/ws", a.streamConversationMessages)
 }
 func (a *API) listConversations(w http.ResponseWriter, r *http.Request) {
 	items, err := a.conversations.ListConversations(r.Context(), r.PathValue("workspaceID"))
@@ -79,6 +80,7 @@ func (a *API) createConversationMessage(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "unable to create message", 500)
 		return
 	}
+	a.live.Publish(message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	_ = json.NewEncoder(w).Encode(message)
