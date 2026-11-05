@@ -18,11 +18,12 @@ export function inputVector(keys:ReadonlySet<string>):Position {
  return {x:x/length,y:y/length};
 }
 export type PlayerState={position:Position;moving:boolean;facing:number;seated:boolean;seatId?:string};
-export function usePlayerMovement(desks:Position[],enabled:boolean,occupiedSeats:ReadonlySet<string>=new Set()):PlayerState {
+export function usePlayerMovement(desks:Position[],enabled:boolean,occupiedSeats:ReadonlySet<string>=new Set(),sceneId="office",spawn=PLAYER_START):PlayerState {
  const [state,setState]=useState<PlayerState>({position:PLAYER_START,moving:false,facing:0,seated:false});
- const position=useRef<Position>(PLAYER_START),facing=useRef(0),seated=useRef(false),seatId=useRef<string|undefined>(undefined),desksRef=useRef(desks),occupiedRef=useRef(occupiedSeats),lastMove=useRef(0),stopTimer=useRef<number|undefined>(undefined);
+ const position=useRef<Position>(spawn),facing=useRef(0),seated=useRef(false),seatId=useRef<string|undefined>(undefined),desksRef=useRef(desks),occupiedRef=useRef(occupiedSeats),lastMove=useRef(0),stopTimer=useRef<number|undefined>(undefined),sceneRef=useRef(sceneId),scenePositions=useRef(new Map<string,Position>());
  desksRef.current=desks;
  occupiedRef.current=occupiedSeats;
+ useEffect(()=>{if(sceneRef.current===sceneId)return;scenePositions.current.set(sceneRef.current,position.current);sceneRef.current=sceneId;position.current=scenePositions.current.get(sceneId)??spawn;seated.current=false;seatId.current=undefined;setState({position:position.current,moving:false,facing:facing.current,seated:false});},[sceneId,spawn.x,spawn.y]);
  useEffect(()=>{
   if(!enabled)return;
   const down=(event:KeyboardEvent)=>{

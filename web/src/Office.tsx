@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
-import { makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
+import { makeElevator,makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
 import {createCharacterSprite,directionFromDelta,directionFromFacing,preloadCharacterSprites,type CharacterDirection,type CharacterSprite} from "./characterSprites";
 import type {PlayerState} from "./playerMovement";
 import{snapToGrid}from"./worldGrid";
@@ -17,12 +17,12 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number; pose?:"stand"|"sit"|"work" };
-export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
+export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void;onOpenElevator?:()=>void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions = desks }: OfficeProps) {
+export function Office({ agents = fallback, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator, onMove, selectedId, deskPositions = desks }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
- const live = useRef({ agents, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions });
- live.current = { agents, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions };
+ const live = useRef({ agents, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator, onMove, selectedId, deskPositions });
+ live.current = { agents, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator, onMove, selectedId, deskPositions };
  useEffect(() => {
   const element = host.current;
   if (!element) return;
@@ -53,6 +53,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
    app.stage.addChild(room);
    app.stage.addChild(makeWindows());
    app.stage.addChild(makeProjectBoard(() => live.current.onOpenProjects?.()));
+   app.stage.addChild(makeElevator(()=>live.current.onOpenElevator?.()));
    app.stage.eventMode = "static";
    app.stage.on("globalpointermove", e => {
     if (!drag) return;

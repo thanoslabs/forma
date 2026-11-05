@@ -1,5 +1,5 @@
 import{afterEach,describe,expect,it,vi}from"vitest";
-import{ensureDefaultConversation,listConversationMessages,sendConversationMessage}from"./conversationApi";
+import{ensureDefaultConversation,ensureWorkspaceConversation,listConversationMessages,sendConversationMessage}from"./conversationApi";
 
 afterEach(()=>vi.unstubAllGlobals());
 const response=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{"Content-Type":"application/json"}});
@@ -15,4 +15,5 @@ describe("persisted conversation API",()=>{
   expect(fetch.mock.calls[0][0]).toContain("/workspaces/workspace-1/conversations/conversation-1/messages");expect(JSON.parse(String((fetch.mock.calls[1][1] as RequestInit).body))).toEqual({body:"hello",mentions:[]});expect((fetch.mock.calls[1][1] as RequestInit).headers).toMatchObject({"Idempotency-Key":"message-key"});
  });
  it("surfaces API errors",async()=>{vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response("database unavailable",{status:503})));await expect(ensureDefaultConversation()).rejects.toThrow("database unavailable");});
+ it("selects or creates a conversation for an elevator floor",async()=>{const fetch=vi.fn().mockResolvedValue(response([{id:"conversation-2",workspaceId:"workspace-2",title:"Office"}]));vi.stubGlobal("fetch",fetch);await expect(ensureWorkspaceConversation("workspace-2")).resolves.toEqual({workspaceId:"workspace-2",conversationId:"conversation-2"});expect(fetch.mock.calls[0][0]).toContain("workspaces/workspace-2/conversations");});
 });

@@ -1,7 +1,7 @@
 import type {LinkedMention} from "./mentions";
 
 export type ConversationMessage={id:string;conversationId:string;body:string;author:{kind:"user"|"agent"|"system";id:string;name:string};mentions:LinkedMention[];occurredAt:string;replyToMessageId?:string};
-type Workspace={id:string;name:string};
+export type Workspace={id:string;name:string};
 type Conversation={id:string;workspaceId:string;title:string};
 export type ConversationScope={workspaceId:string;conversationId:string};
 
@@ -11,12 +11,15 @@ async function request<T>(path:string,init?:RequestInit):Promise<T>{
 const json=(body:unknown):RequestInit=>({method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
 
 export async function ensureDefaultConversation(signal?:AbortSignal):Promise<ConversationScope>{
- let workspaces=await request<Workspace[]>("/api/v1/workspaces",{signal});
+ let workspaces=await listWorkspaces(signal);
  if(!workspaces.length)workspaces=[await request<Workspace>("/api/v1/workspaces",{...json({name:"Forma"}),signal})];
- const workspace=workspaces[0];
- let conversations=await request<Conversation[]>(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/conversations`,{signal});
- if(!conversations.length)conversations=[await request<Conversation>(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/conversations`,{...json({title:"Office"}),signal})];
- return {workspaceId:workspace.id,conversationId:conversations[0].id};
+ return ensureWorkspaceConversation(workspaces[0].id,signal);
+}
+export function listWorkspaces(signal?:AbortSignal):Promise<Workspace[]>{return request<Workspace[]>("/api/v1/workspaces",{signal});}
+export async function ensureWorkspaceConversation(workspaceId:string,signal?:AbortSignal):Promise<ConversationScope>{
+ let conversations=await request<Conversation[]>(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/conversations`,{signal});
+ if(!conversations.length)conversations=[await request<Conversation>(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/conversations`,{...json({title:"Office"}),signal})];
+ return {workspaceId,conversationId:conversations[0].id};
 }
 
 function messagesPath(scope:ConversationScope):string{return `/api/v1/workspaces/${encodeURIComponent(scope.workspaceId)}/conversations/${encodeURIComponent(scope.conversationId)}/messages`;}
