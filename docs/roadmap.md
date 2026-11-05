@@ -2,10 +2,10 @@
 
 - **M0 Architecture**: ADRs, product boundaries, canonical model, adapter and asset-pack specifications, acceptance criteria.
 - **M1 Core**: Go service, PostgreSQL schema/migrations, API, authentication baseline, durable event log, WebSocket replay, React shell, CI.
-- **M2 Agents**: mock harness and Paseo adapter, discovery, status and session inspection, capability-aware actions.
+- **M2 Conversations & Agents**: canonical conversations, mock harness and Paseo adapter, discovery, status, session inspection and capability-aware user-to-agent messages.
 - **M3 Projects**: Overwatch adapter, project/work-item projections, claim/heartbeat integration, task-to-execution correlation.
 - **M4 Living office**: PixiJS illustrated rooms, navigation, avatars, interaction hotspots, activity visualization, versioned packs.
-- **M5 Orchestration**: dispatch and approvals, execution attempts, retries, auditability, cross-agent handoffs respecting provider ownership.
+- **M5 Chat & Orchestration**: Slack proof of concept, chat delivery reconciliation, dispatch and approvals, execution attempts, retries, auditability, and cross-agent handoffs respecting provider ownership.
 - **M6 Production**: external adapter protocol/SDK, RBAC/OIDC, observability, asset-pack customization, multi-user collaboration, Helm and scale tests.
 
 Each milestone requires automated tests, docs, and green CI. PRs should be stacked in dependency order and kept mergeable. The first demo should use a mock harness and Postgres, with the visual world and management view reflecting the same event stream.

@@ -2,6 +2,11 @@
 title: Home
 ---
 
-Project documentation. Every markdown file under `docs/` is built into a static site by [nebula-md](https://github.com/thanoslabs/nebula-md) and published to GitHub Pages on merge to `main` (public repositories only).
+Forma is a self-hostable virtual office where people can observe, organize, and interact with software agents. The office is a projection of durable workspace activity; agent harnesses execute work and external project and chat systems remain authoritative for their native resources.
 
-Link between pages with Obsidian-style `[[wikilinks]]`.
+- [[architecture]] explains the system boundaries and canonical model.
+- [[integrations]] defines agent, project, and chat provider contracts.
+- [[conversations]] defines canonical messages, agent turns, and external delivery.
+- [[roadmap]] tracks the path from the current demo to a multi-user deployment.
+- [[development]] explains how to run the service and web client locally.
+- [[interactive-demo]] documents the browser-based office prototype.

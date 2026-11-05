@@ -2,13 +2,15 @@
 
 ## Purpose
 
-GitHub template repository for bootstrapping `thanoslabs` projects. Provides Renovate-managed dependency updates, branch protection, CODEOWNERS, license, and standard `.gitignore` as a starting point — not a runnable application.
+Forma is a self-hostable, browser-based virtual office for observing, organizing, and interacting with software agents. It is a runnable Go/PostgreSQL and React/TypeScript application, not a repository template.
 
 ## Tech stack
 
-- **Renovate** for dependency updates (managers: `docker-compose`, `github-actions`, `gomod`)
-- **GitHub Actions** for the Renovate, release, and docs workflows
-- **[nebula-md](https://github.com/thanoslabs/nebula-md)** for building `docs/` into a static markdown site
+- **Go 1.24** with pgx and PostgreSQL
+- **React 19 + TypeScript + Vite**
+- **PixiJS + Three.js** for the office world
+- **GitHub Actions** for CI, Pages, Renovate, and releases
+- **[nebula-md](https://github.com/thanoslabs/nebula-md)** conventions for `docs/`
 - **MIT License**
 
 ## Structure
@@ -40,7 +42,7 @@ GitHub template repository for bootstrapping `thanoslabs` projects. Provides Ren
 - See `AGENTS.md` for full agent workflow, code style, testing, and git/PR guidance.
 - Branch protection: never push directly to `main`; all changes via PR with review.
 - When adapting this template for a new project, update `renovate.json` managers/schedules and enable the repo in the Renovate GitHub App.
-- Project-specific `CLAUDE.md` / `AGENTS.md` content should be filled in once the actual stack is added (`src/`, `tests/`, build commands, etc. are placeholders in `AGENTS.md`, not present here).
+- Keep adapter contracts provider-neutral and scope all native provider IDs to their connection.
 
 ## Releases
 

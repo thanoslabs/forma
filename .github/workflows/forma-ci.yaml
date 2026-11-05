@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y postgresql-client
           make migrate-up
           make migrate-up
-          psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('workspaces','connections','activity_events')" | grep -qx 3
+          psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('workspaces','connections','activity_events','conversations','conversation_participants','conversation_messages','message_deliveries','agent_turns')" | grep -qx 8
   frontend:
     runs-on: ubuntu-latest
     defaults:
