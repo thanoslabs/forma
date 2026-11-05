@@ -20,6 +20,8 @@ type Connection struct {
 	AdapterID    string    `json:"adapterId"`
 	ProviderType string    `json:"providerType"`
 	DisplayName  string    `json:"displayName"`
+	EndpointURL  string    `json:"endpointUrl,omitempty"`
+	Credential   string    `json:"-"`
 	CreatedAt    time.Time `json:"createdAt"`
 }
 

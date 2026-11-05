@@ -41,9 +41,14 @@ func (r *AgentReader) ListAgents(ctx context.Context, workspaceID string) ([]Age
 		if connection.ProviderType != "agent" {
 			continue
 		}
-		adapter, ok := r.registry.Adapter(connection.AdapterID)
-		if !ok {
-			readErrors = append(readErrors, fmt.Errorf("connection %s: adapter %s is unavailable", connection.ID, connection.AdapterID))
+		resolvedConnection, err := r.connections.GetConnection(ctx, workspaceID, connection.ID)
+		if err != nil {
+			readErrors = append(readErrors, fmt.Errorf("connection %s: %w", connection.ID, err))
+			continue
+		}
+		adapter, err := r.registry.Resolve(ctx, resolvedConnection)
+		if err != nil {
+			readErrors = append(readErrors, fmt.Errorf("connection %s: %w", connection.ID, err))
 			continue
 		}
 		found, err := adapter.ListAgents(ctx)

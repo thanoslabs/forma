@@ -33,10 +33,15 @@ type Store interface {
 
 type Publisher interface{ Publish(conversations.Message) }
 
-type Registry struct{ adapters map[string]agents.Adapter }
+type AdapterFactory func(context.Context, workspaces.Connection) (agents.Adapter, error)
+
+type Registry struct {
+	adapters  map[string]agents.Adapter
+	factories map[string]AdapterFactory
+}
 
 func NewRegistry(adapters ...agents.Adapter) *Registry {
-	registry := &Registry{adapters: make(map[string]agents.Adapter)}
+	registry := &Registry{adapters: make(map[string]agents.Adapter), factories: make(map[string]AdapterFactory)}
 	for _, adapter := range adapters {
 		registry.adapters[adapter.ID()] = adapter
 	}
@@ -46,6 +51,19 @@ func NewRegistry(adapters ...agents.Adapter) *Registry {
 func (r *Registry) Adapter(id string) (agents.Adapter, bool) {
 	adapter, ok := r.adapters[id]
 	return adapter, ok
+}
+
+func (r *Registry) RegisterFactory(id string, factory AdapterFactory) { r.factories[id] = factory }
+
+func (r *Registry) Resolve(ctx context.Context, connection workspaces.Connection) (agents.Adapter, error) {
+	if factory := r.factories[connection.AdapterID]; factory != nil && connection.EndpointURL != "" {
+		return factory(ctx, connection)
+	}
+	adapter, ok := r.Adapter(connection.AdapterID)
+	if !ok {
+		return nil, fmt.Errorf("adapter %s is unavailable", connection.AdapterID)
+	}
+	return adapter, nil
 }
 
 type Router struct {
@@ -86,7 +104,10 @@ func (r *Router) routeMention(ctx context.Context, workspaceID, requestKey strin
 	if connection.ProviderType != "agent" {
 		return fmt.Errorf("connection %s is not an agent provider", connection.ID)
 	}
-	adapter := r.registry.adapters[connection.AdapterID]
+	adapter, err := r.registry.Resolve(ctx, connection)
+	if err != nil {
+		return err
+	}
 	if !hasCapability(adapter, agents.Input) {
 		return fmt.Errorf("adapter %s: %w", connection.AdapterID, agents.ErrUnsupported)
 	}

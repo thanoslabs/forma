@@ -17,8 +17,10 @@ import (
 	"github.com/thanoslabs/forma/internal/httpapi"
 	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/realtime"
+	"github.com/thanoslabs/forma/internal/secrets"
 	"github.com/thanoslabs/forma/internal/store/postgres"
 	"github.com/thanoslabs/forma/internal/turns"
+	"github.com/thanoslabs/forma/internal/workspaces"
 )
 
 func main() {
@@ -42,7 +44,14 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	store := postgres.New(pool)
+	var credentialCipher *secrets.Cipher
+	if encodedKey := os.Getenv("FORMA_CREDENTIAL_KEY"); encodedKey != "" {
+		credentialCipher, err = secrets.FromBase64(encodedKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	store := postgres.NewWithCipher(pool, credentialCipher)
 	live := realtime.New()
 	agentAdapters := []agents.Adapter{mock.New()}
 	if paseoURL := os.Getenv("FORMA_PASEO_URL"); paseoURL != "" {
@@ -53,6 +62,9 @@ func main() {
 		agentAdapters = append(agentAdapters, provider)
 	}
 	registry := turns.NewRegistry(agentAdapters...)
+	registry.RegisterFactory("paseo", func(_ context.Context, connection workspaces.Connection) (agents.Adapter, error) {
+		return paseo.New(paseo.Config{URL: connection.EndpointURL, Password: connection.Credential})
+	})
 	router := turns.NewRouter(store, store, registry, live)
 	httpapi.New(store, store, live, router).WithAgentProjections(projections.NewAgentReader(store, registry)).Register(mux)
 	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
@@ -76,7 +88,7 @@ func main() {
 	if addr == "" {
 		addr = ":8080"
 	}
-	server := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Addr: addr, Handler: httpapi.RequireBearer(mux, os.Getenv("FORMA_API_TOKEN")), ReadHeaderTimeout: 5 * time.Second}
 	log.Printf("Forma listening on %s", addr)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)

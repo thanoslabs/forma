@@ -18,7 +18,7 @@ Overwatch already exposes /api/v1, /openapi.yaml, scoped bearer tokens, and MCP 
 ## Harnesses
 Paseo is the first target harness. Forma connects directly to the Paseo daemon's version 1 WebSocket protocol, authenticates with the protocol `hello`, discovers agents with `fetch_agents_request`, and sends prompts with `send_agent_message_request`. The Forma command idempotency key is passed as Paseo's client-provided `messageId`.
 
-Set `FORMA_PASEO_URL` to the daemon WebSocket endpoint and, when required, set `FORMA_PASEO_PASSWORD`. Then create an agent connection whose `adapterId` is `paseo`. These process-level settings are transitional until per-connection encrypted credentials are available.
+Create an agent connection whose `adapterId` is `paseo`, `endpointUrl` is the daemon WebSocket endpoint, and write-only `credential` is its password when required. Forma encrypts the credential before storing it and resolves a connection-scoped Paseo adapter at runtime. `FORMA_PASEO_URL` and `FORMA_PASEO_PASSWORD` remain a development fallback.
 
 Paseo prompt acceptance is asynchronous. Forma marks the command and turn accepted after Paseo acknowledges it; it does not fabricate an agent reply. A later projection/event layer will correlate completed Paseo turns back into the conversation timeline. The deterministic mock harness remains available for synchronous UI and adapter conformance tests.
 
