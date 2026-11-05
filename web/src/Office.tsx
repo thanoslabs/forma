@@ -26,10 +26,23 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
   let disposed = false;
   const actors = new Map<string, { node: Container; label: Text; position: Position; target: Position; source: Position }>();
   let activeId: string | undefined;
+  let observerCleanup: (() => void) | undefined;
   const init = async () => {
    await app.init({ width: 860, height: 490, background: "#c4e5ed", antialias: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
    if (disposed) { app.destroy(true); return; }
    element.appendChild(app.canvas);
+   // The Pixi world and Three.js overlay must occupy the same actual viewport.
+   // Keep simulation coordinates logical (860×490), scaling the stage on resize.
+   const resize = () => {
+    const width = Math.max(1, element.clientWidth);
+    const height = Math.max(1, element.clientHeight);
+    app.renderer.resize(width, height);
+    app.stage.scale.set(width / 860, height / 490);
+   };
+   const observer = new ResizeObserver(resize);
+   observer.observe(element);
+   observerCleanup = () => observer.disconnect();
+   resize();
    const room = new Graphics().rect(0, 0, 860, 490).fill("#f5dfb6");
    room.eventMode = "static";
    room.cursor = "crosshair";
@@ -73,7 +86,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
    });
   };
   void init();
-  return () => { disposed = true; if (app.renderer) app.destroy(true); };
+  return () => { disposed = true; observerCleanup?.(); if (app.renderer) app.destroy(true); };
  }, []);
  return <div ref={host} className="office-canvas" aria-label="Interactive illustrated office. Select an agent and click the floor to move." />;
 }
