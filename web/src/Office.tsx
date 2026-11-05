@@ -3,7 +3,7 @@ import { Application, Container, Graphics, Text } from "pixi.js";
 
 export type Position = { x: number; y: number };
 export const desks: Position[] = [{ x: 220, y: 205 }, { x: 430, y: 205 }, { x: 640, y: 205 }];
-export const bounds = { left: 72, right: 788, top: 95, bottom: 423 };
+export const bounds = { left: 22, right: 838, top: 26, bottom: 464 };
 export function clampPosition(p: Position): Position {
  return { x: Math.max(bounds.left, Math.min(bounds.right, p.x)), y: Math.max(bounds.top, Math.min(bounds.bottom, p.y)) };
 }
