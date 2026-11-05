@@ -1,8 +1,8 @@
-ALTER TABLE connections DROP CONSTRAINT connections_provider_type_check;
+ALTER TABLE connections DROP CONSTRAINT IF EXISTS connections_provider_type_check;
 ALTER TABLE connections ADD CONSTRAINT connections_provider_type_check
  CHECK (provider_type IN ('agent', 'project', 'chat'));
 
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
  id UUID PRIMARY KEY,
  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
  title TEXT NOT NULL,
@@ -13,10 +13,10 @@ CREATE TABLE conversations (
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  CHECK ((provider_project_id IS NULL AND provider_work_item_id IS NULL) OR project_connection_id IS NOT NULL)
 );
-CREATE INDEX conversations_workspace_updated_idx
+CREATE INDEX IF NOT EXISTS conversations_workspace_updated_idx
  ON conversations(workspace_id, updated_at DESC, id);
 
-CREATE TABLE conversation_participants (
+CREATE TABLE IF NOT EXISTS conversation_participants (
  id UUID PRIMARY KEY,
  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
  participant_type TEXT NOT NULL CHECK (participant_type IN ('user', 'agent', 'external')),
@@ -30,14 +30,14 @@ CREATE TABLE conversation_participants (
   OR (participant_type IN ('agent', 'external') AND user_id IS NULL AND connection_id IS NOT NULL AND provider_participant_id IS NOT NULL)
  )
 );
-CREATE UNIQUE INDEX conversation_participants_user_unique
+CREATE UNIQUE INDEX IF NOT EXISTS conversation_participants_user_unique
  ON conversation_participants(conversation_id, user_id)
  WHERE user_id IS NOT NULL;
-CREATE UNIQUE INDEX conversation_participants_provider_unique
+CREATE UNIQUE INDEX IF NOT EXISTS conversation_participants_provider_unique
  ON conversation_participants(conversation_id, connection_id, provider_participant_id)
  WHERE connection_id IS NOT NULL AND provider_participant_id IS NOT NULL;
 
-CREATE TABLE conversation_messages (
+CREATE TABLE IF NOT EXISTS conversation_messages (
  id UUID PRIMARY KEY,
  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
  author_participant_id UUID REFERENCES conversation_participants(id) ON DELETE SET NULL,
@@ -48,10 +48,10 @@ CREATE TABLE conversation_messages (
  occurred_at TIMESTAMPTZ NOT NULL,
  received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX conversation_messages_timeline_idx
+CREATE INDEX IF NOT EXISTS conversation_messages_timeline_idx
  ON conversation_messages(conversation_id, occurred_at, id);
 
-CREATE TABLE message_deliveries (
+CREATE TABLE IF NOT EXISTS message_deliveries (
  id UUID PRIMARY KEY,
  message_id UUID NOT NULL REFERENCES conversation_messages(id) ON DELETE CASCADE,
  connection_id UUID NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
@@ -66,11 +66,11 @@ CREATE TABLE message_deliveries (
  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  UNIQUE (connection_id, idempotency_key)
 );
-CREATE UNIQUE INDEX message_deliveries_provider_message_unique
+CREATE UNIQUE INDEX IF NOT EXISTS message_deliveries_provider_message_unique
  ON message_deliveries(connection_id, provider_message_id)
  WHERE provider_message_id IS NOT NULL;
 
-CREATE TABLE agent_turns (
+CREATE TABLE IF NOT EXISTS agent_turns (
  id UUID PRIMARY KEY,
  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
  request_message_id UUID NOT NULL REFERENCES conversation_messages(id) ON DELETE RESTRICT,
@@ -84,5 +84,5 @@ CREATE TABLE agent_turns (
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  UNIQUE (conversation_id, idempotency_key)
 );
-CREATE INDEX agent_turns_conversation_created_idx
+CREATE INDEX IF NOT EXISTS agent_turns_conversation_created_idx
  ON agent_turns(conversation_id, created_at, id);
