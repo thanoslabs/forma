@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
+import { makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
 
 export type Position = { x: number; y: number };
 export const desks: Position[] = [{ x: 220, y: 205 }, { x: 430, y: 205 }, { x: 640, y: 205 }];
@@ -48,16 +49,8 @@ export function Office({ agents = fallback, onSelect, onDeselect, onOpenProjects
    room.cursor = "crosshair";
    room.on("pointertap", () => live.current.onDeselect?.());
    app.stage.addChild(room);
-   app.stage.addChild(new Graphics().ellipse(430, 310, 290, 115).fill("#a9c8a6"));
-   // The project board is a physical, clickable fixture in the room.
-   const board = new Graphics().roundRect(30, 48, 165, 76, 9).fill("#26374c").stroke({ color: "#d8b37e", width: 5 });
-   board.eventMode = "static"; board.cursor = "pointer";
-   board.on("pointertap", e => { e.stopPropagation(); live.current.onOpenProjects?.(); });
-   const boardTitle = new Text({ text: "PROJECT BOARD", style: { fontFamily: "sans-serif", fontSize: 16, fontWeight: "bold", fill: "#f5e8d2" } });
-   boardTitle.position.set(44, 59); board.eventMode = "static";
-   const boardSubtitle = new Text({ text: "Open projects  ›", style: { fontFamily: "sans-serif", fontSize: 12, fill: "#b9d4e3" } });
-   boardSubtitle.position.set(44, 89);
-   board.addChild(boardTitle, boardSubtitle); app.stage.addChild(board);
+   app.stage.addChild(makeWindows());
+   app.stage.addChild(makeProjectBoard(() => live.current.onOpenProjects?.()));
    app.stage.eventMode = "static";
    app.stage.on("globalpointermove", e => {
     if (!drag) return;
@@ -74,7 +67,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onOpenProjects
    app.stage.on("pointerupoutside", finishDrag);
    const furniture = new Container(); app.stage.addChild(furniture);
    let deskKey = "";
-   const drawFurniture = (positions: Position[]) => { furniture.removeChildren().forEach(child => child.destroy()); for (const d of positions) furniture.addChild(new Graphics().roundRect(d.x - 65, d.y, 130, 50, 12).fill("#9b684e").roundRect(d.x - 35, d.y - 35, 70, 48, 6).fill("#3d5664")); };
+   const drawFurniture = (positions: Position[]) => { furniture.removeChildren().forEach(child => child.destroy({children:true})); furniture.addChild(makeWorkstations(positions)); };
    drawFurniture(live.current.deskPositions);
    app.ticker.add(ticker => {
     const key = JSON.stringify(live.current.deskPositions); if (key !== deskKey) { deskKey = key; drawFurniture(live.current.deskPositions); }
