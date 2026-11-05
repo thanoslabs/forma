@@ -68,8 +68,8 @@ export function createCharacter(style: CharacterStyle, accent = 0x9271d6): Puppe
   ball(head,beanie,0,0.68,0,0.72,0.3,0.7);
   ball(head,beanie,0,0.54,0.08,0.78,0.13,0.72);
   ball(head,beanie,0,0.96,0,0.17,0.12,0.16);
-  for(const x of [-0.25,0.25]) ball(head,dark,x,0.12,0.571,0.045,0.095,0.025);
-  ball(head,mat(0xb77960),0,-0.08,0.59,0.055,0.025,0.015);
+  for(const x of [-0.25,0.25]) ball(head,dark,x,0.12,0.755,0.055,0.095,0.035);
+  ball(head,mat(0xb77960),0,-0.08,0.765,0.055,0.025,0.025);
   for(const side of [-1,1]){
    const arm=side<0?leftArm:rightArm,leg=side<0?leftLeg:rightLeg;
    ball(arm,hoodie,0,-0.23,0,0.25,0.32,0.34);
