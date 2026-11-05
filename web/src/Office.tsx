@@ -16,7 +16,7 @@ export function walkToward(current: Position, target: Position, distance: number
  if (length === 0 || length <= distance) return target;
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
-export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number };
+export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number; pose?:"stand"|"sit"|"work" };
 export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
 export function Office({ agents = fallback, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions = desks }: OfficeProps) {
@@ -28,7 +28,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
   if (!element) return;
   const app = new Application();
   let disposed = false;
-  const actors = new Map<string, { node: Container; character:CharacterSprite; label: Text; position: Position; target: Position; source: Position; direction:CharacterDirection }>();
+  const actors = new Map<string, { node: Container; character:CharacterSprite; indicator:Graphics; indicatorText:Text; label: Text; position: Position; target: Position; source: Position; direction:CharacterDirection }>();
   let drag: { id: string; pointerId: number; start: Position; moved: boolean } | undefined;
   let observerCleanup: (() => void) | undefined;
   const init = async () => {
@@ -79,7 +79,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
     for (const a of incoming) {
      let actor = actors.get(a.id);
      if (!actor) {
-      const node = new Container(),character=createCharacterSprite();node.addChild(character.sprite);
+      const node = new Container(),character=createCharacterSprite(),indicator=new Graphics(),indicatorText=new Text({text:"",style:{fontFamily:"sans-serif",fontSize:15,fontWeight:"bold",fill:0xffffff}});indicator.circle(0,0,15).fill(0x59677b).stroke({color:0xffffff,width:2});indicator.position.set(0,-88);indicatorText.anchor.set(.5);indicatorText.position.set(0,-89);node.addChild(character.sprite,indicator,indicatorText);
       node.eventMode = "static"; node.cursor = "pointer";
       node.on("pointerdown", e => {
        e.stopPropagation();
@@ -90,7 +90,7 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
       label.anchor.set(0.5);
       world.addChild(node);app.stage.addChild(label);
-      actor = { node,character,label, position: { ...a.position }, target: { ...a.position }, source: { ...a.position },direction:"southeast" };
+      actor = { node,character,indicator,indicatorText,label, position: { ...a.position }, target: { ...a.position }, source: { ...a.position },direction:"southeast" };
       actors.set(a.id, actor);
      }
      if (actor.source.x !== a.position.x || actor.source.y !== a.position.y) { actor.target = clampPosition(a.position); actor.source = { ...a.position }; }
@@ -99,11 +99,12 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
      actor.node.position.set(actor.position.x, actor.position.y);
      actor.label.position.set(actor.position.x, actor.position.y + 47);
      actor.label.text = a.name + " · " + a.status;
-     actor.node.alpha = live.current.selectedId === a.id ? 1 : 0.96;actor.node.zIndex=actor.position.y;
-     actor.character.setPose(moving?"walk":a.status==="working"?"work":"idle",actor.direction,app.ticker.lastTime/1000);
+     actor.node.alpha = live.current.selectedId === a.id ? 1 : 0.96;actor.node.zIndex=actor.position.y-(a.pose==="sit"||a.pose==="work"?50:0);
+     actor.character.setPose(moving?"walk":a.pose==="work"?"work":a.pose==="sit"?"sit":"idle",actor.direction,app.ticker.lastTime/1000);
+     const indicator=a.status==="working"?{text:"⚙",color:0x3b8f79}:a.status==="walking"?{text:"…",color:0x627fbd}:a.status==="blocked"?{text:"!",color:0xb2574f}:a.status==="completed"?{text:"✓",color:0x678d50}:undefined;actor.indicator.visible=actor.indicatorText.visible=!!indicator;if(indicator){actor.indicator.clear().circle(0,0,15).fill(indicator.color).stroke({color:0xffffff,width:2});actor.indicatorText.text=indicator.text;}
      actor.label.style.fill = a.status === "working" ? "#275c50" : a.status === "blocked" ? "#a04640" : "#28384a";
     }
-    const ps=live.current.playerState;renderedPlayer=walkToward(renderedPlayer,ps.position,Math.min(14,4*ticker.deltaTime));const playerMoving=Math.hypot(renderedPlayer.x-ps.position.x,renderedPlayer.y-ps.position.y)>.2;playerNode.position.set(renderedPlayer.x,renderedPlayer.y);playerNode.zIndex=renderedPlayer.y;playerCharacter.setPose(playerMoving?"walk":"idle",directionFromFacing(ps.facing),app.ticker.lastTime/1000);
+    const ps=live.current.playerState;renderedPlayer=walkToward(renderedPlayer,ps.position,Math.min(14,4*ticker.deltaTime));const playerMoving=Math.hypot(renderedPlayer.x-ps.position.x,renderedPlayer.y-ps.position.y)>.2;playerNode.position.set(renderedPlayer.x,renderedPlayer.y);playerNode.zIndex=renderedPlayer.y-(ps.seated?50:0);playerCharacter.setPose(playerMoving?"walk":ps.seated?"sit":"idle",directionFromFacing(ps.facing),app.ticker.lastTime/1000);
     for (const [id, actor] of actors) if (!incoming.some(a => a.id === id)) { actor.node.destroy(); actor.label.destroy(); actors.delete(id); }
    });
   };

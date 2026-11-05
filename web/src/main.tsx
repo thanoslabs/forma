@@ -23,10 +23,11 @@ type WorkspacePanel = "chat" | "agents" | "projects" | "activity" | "settings" |
 
 function App() {
   const [panel,setPanel] = React.useState<WorkspacePanel>(null);
+  const [layout,setLayout] = React.useState(loadLayout);
   const { state, dispatch } = useSimulation();
   const [selectedAgent,setSelectedAgent] = React.useState<string | undefined>();
-  const [layout,setLayout] = React.useState(loadLayout);
-  const playerState=usePlayerMovement(layout.desks,panel===null);
+  const occupiedSeats=React.useMemo(()=>new Set(state.agents.filter(agent=>agent.pose==="work"||agent.pose==="sit").map(agent=>agent.workstationId).filter((id):id is string=>!!id)),[state.agents]);
+  const playerState=usePlayerMovement(layout.desks,panel===null,occupiedSeats);
   React.useEffect(()=>saveLayout(layout),[layout]);
   const [messages,setMessages]=React.useState<ChatMessage[]>([{id:"welcome",author:"Forma",body:"Welcome to the shared office conversation. Messages are persisted when the Forma service is connected.",mentions:[],time:""}]);
   const [conversationScope,setConversationScope]=React.useState<ConversationScope>();
