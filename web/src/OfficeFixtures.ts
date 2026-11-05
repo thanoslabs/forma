@@ -46,6 +46,9 @@ export function makeProjectBoard(onOpen: () => void): Container {
  board.addChild(hit);
  return board;
 }
+export function makeElevator(onOpen:()=>void):Container{
+ const elevator=new Container(),art=new Graphics();art.roundRect(772,105,74,172,8).fill("#596775").stroke({color:"#34414f",width:4});art.roundRect(780,115,58,151,4).fill("#b9c2c9");art.rect(808,115,3,151).fill("#6f7d88");art.roundRect(747,151,20,36,4).fill("#303c49");art.circle(757,162,4).fill("#a6e5c8");art.circle(757,177,4).fill("#e4bd73");elevator.addChild(art);const label=new Text({text:"ELEVATOR",style:{fontFamily:"sans-serif",fontSize:10,fontWeight:"bold",fill:"#eaf0f3"}});label.anchor.set(.5);label.position.set(809,96);elevator.addChild(label);const hit=new Graphics().roundRect(744,94,104,187,8).fill({color:0xffffff,alpha:.001});hit.eventMode="static";hit.cursor="pointer";hit.on("pointertap",event=>{event.stopPropagation();onOpen();});elevator.addChild(hit);return elevator;
+}
 export function makeWorkstations(positions:Position[]): Container[] {
  const layers:Container[]=[];
  positions.forEach((p,index)=>{

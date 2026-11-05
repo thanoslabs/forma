@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
-import { makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
+import { makeElevator,makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
 import {createCharacterSprite,directionFromDelta,directionFromFacing,preloadCharacterSprites,type CharacterDirection,type CharacterSprite} from "./characterSprites";
 import type {PlayerState} from "./playerMovement";
 import{snapToGrid}from"./worldGrid";
+import{makeStreetScene}from"./StreetScene";
 
 export type Position = { x: number; y: number };
 export const desks: Position[] = [{ x: 220, y: 205 }, { x: 430, y: 205 }, { x: 640, y: 205 }];
@@ -17,12 +18,12 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number; pose?:"stand"|"sit"|"work" };
-export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
+export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState;sceneKind?:"office"|"street"; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void;onOpenElevator?:()=>void;onEnterBuilding?:()=>void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions = desks }: OfficeProps) {
+export function Office({ agents = fallback, playerState,sceneKind="office", onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions = desks }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
- const live = useRef({ agents, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions });
- live.current = { agents, playerState, onSelect, onDeselect, onOpenProjects, onMove, selectedId, deskPositions };
+ const live = useRef({ agents, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions });
+ live.current = { agents, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions };
  useEffect(() => {
   const element = host.current;
   if (!element) return;
@@ -46,13 +47,10 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
    observer.observe(element);
    observerCleanup = () => observer.disconnect();
    resize();
-   const room = new Graphics().rect(0, 0, 860, 490).fill("#f5dfb6");
-   room.eventMode = "static";
-   room.cursor = "crosshair";
-   room.on("pointertap", () => live.current.onDeselect?.());
-   app.stage.addChild(room);
-   app.stage.addChild(makeWindows());
-   app.stage.addChild(makeProjectBoard(() => live.current.onOpenProjects?.()));
+   let streetUpdate:((deltaMS:number)=>void)|undefined;
+   if(sceneKind==="office"){
+    const room = new Graphics().rect(0, 0, 860, 490).fill("#f5dfb6");room.eventMode="static";room.cursor="crosshair";room.on("pointertap",()=>live.current.onDeselect?.());app.stage.addChild(room);app.stage.addChild(makeWindows(),makeProjectBoard(()=>live.current.onOpenProjects?.()),makeElevator(()=>live.current.onOpenElevator?.()));
+   }else{const street=await makeStreetScene(()=>live.current.onEnterBuilding?.());app.stage.addChild(street.layer);streetUpdate=street.update;}
    app.stage.eventMode = "static";
    app.stage.on("globalpointermove", e => {
     if (!drag) return;
@@ -72,9 +70,9 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
    const playerCharacter=createCharacterSprite();const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);world.addChild(playerNode);let renderedPlayer={...live.current.playerState.position};
    let deskKey = "";
    let furniture:Container[]=[];const drawFurniture = (positions: Position[]) => { furniture.forEach(child=>{world.removeChild(child);child.destroy({children:true});});furniture=makeWorkstations(positions);world.addChild(...furniture); };
-   drawFurniture(live.current.deskPositions);
+   if(sceneKind==="office")drawFurniture(live.current.deskPositions);
    app.ticker.add(ticker => {
-    const key = JSON.stringify(live.current.deskPositions); if (key !== deskKey) { deskKey = key; drawFurniture(live.current.deskPositions); }
+    streetUpdate?.(ticker.deltaMS);const key = JSON.stringify(live.current.deskPositions); if (sceneKind==="office"&&key !== deskKey) { deskKey = key; drawFurniture(live.current.deskPositions); }
     const incoming = live.current.agents;
     for (const a of incoming) {
      let actor = actors.get(a.id);
@@ -110,6 +108,6 @@ export function Office({ agents = fallback, playerState, onSelect, onDeselect, o
   };
   void init();
   return () => { disposed = true; observerCleanup?.(); if (app.renderer) app.destroy(true); };
- }, []);
- return <div ref={host} className="office-canvas" aria-label="Interactive illustrated office. Select an agent and click the floor to move." />;
+ }, [sceneKind]);
+ return <div ref={host} className="office-canvas" aria-label={sceneKind==="street"?"Interactive illustrated street. Use the keyboard to explore and enter the office building.":"Interactive illustrated office. Select an agent and use the keyboard to move."} />;
 }
