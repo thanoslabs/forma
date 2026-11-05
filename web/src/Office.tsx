@@ -64,7 +64,7 @@ export function Office({ agents = fallback, onSelect, onDeselect, onMove, select
      let actor = actors.get(a.id);
      if (!actor) {
       const node = new Container();
-      node.addChild(new Graphics().ellipse(0, 0, 26, 32).fill(a.color ?? 0x7e70cf).ellipse(-9, -8, 4, 6).fill(0xffffff).ellipse(9, -8, 4, 6).fill(0xffffff).ellipse(-9, -8, 2, 3).fill(0x25384d).ellipse(9, -8, 2, 3).fill(0x25384d).ellipse(0, 5, 13, 7).fill(0xe5ba67));
+      node.addChild(new Graphics().ellipse(0, 0, 38, 43).fill(a.color ?? 0x7e70cf).ellipse(-9, -8, 4, 6).fill(0xffffff).ellipse(9, -8, 4, 6).fill(0xffffff).ellipse(-9, -8, 2, 3).fill(0x25384d).ellipse(9, -8, 2, 3).fill(0x25384d).ellipse(0, 5, 13, 7).fill(0xe5ba67));
       node.eventMode = "static"; node.cursor = "pointer";
       node.on("pointertap", e => { e.stopPropagation(); live.current.onSelect?.(a.id); });
       const label = new Text({ text: "", style: { fontFamily: "sans-serif", fontSize: 13, fill: "#28384a" } });
