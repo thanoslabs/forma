@@ -1,7 +1,8 @@
 import{Assets,Container,Graphics,Sprite,Text}from"pixi.js";
+import{publicAsset}from"./publicAsset";
 
 export async function makeStreetScene(onEnterBuilding:()=>void){
- const layer=new Container(),texture=await Assets.load("/assets/scenes/street.png"),background=new Sprite(texture);background.width=860;background.height=490;layer.addChild(background);
+ const layer=new Container(),texture=await Assets.load(publicAsset("assets/scenes/street.png")),background=new Sprite(texture);background.width=860;background.height=490;layer.addChild(background);
  const entrance=new Graphics().roundRect(353,112,150,174,10).fill({color:0xffffff,alpha:.001});entrance.eventMode="static";entrance.cursor="pointer";entrance.on("pointertap",event=>{event.stopPropagation();onEnterBuilding();});layer.addChild(entrance);
  const label=new Text({text:"ENTER BUILDING",style:{fontFamily:"sans-serif",fontSize:11,fontWeight:"bold",fill:0xffffff,stroke:{color:0x263548,width:4}}});label.anchor.set(.5);label.position.set(428,294);layer.addChild(label);
  const traffic=new Container();traffic.sortableChildren=true;layer.addChild(traffic);
