@@ -1,5 +1,5 @@
 export type MentionKind = "agent" | "project";
-export type MentionTarget = { kind:MentionKind; id:string; name:string };
+export type MentionTarget = { kind:MentionKind; id:string; name:string; connectionId?:string };
 export type LinkedMention = MentionTarget & { start:number; end:number; text:string };
 export type MentionMatch = { start:number; end:number; query:string; kind?:MentionKind };
 export function activeMention(text:string,caret:number):MentionMatch|null {

@@ -63,6 +63,11 @@ func (s *Store) CompleteTurn(ctx context.Context, turn turns.Turn, body string, 
 	return message, tx.Commit(ctx)
 }
 
+func (s *Store) AcceptTurn(ctx context.Context, turn turns.Turn) error {
+	_, err := s.pool.Exec(ctx, `WITH accepted_turn AS (UPDATE agent_turns SET status='accepted',updated_at=now() WHERE id=$1) UPDATE agent_commands SET status='accepted',updated_at=now() WHERE agent_turn_id=$1`, turn.ID)
+	return err
+}
+
 func (s *Store) FailTurn(ctx context.Context, turn turns.Turn, cause error) error {
 	_, err := s.pool.Exec(ctx, `WITH failed_turn AS (UPDATE agent_turns SET status='failed',error_message=$1,updated_at=now() WHERE id=$2) UPDATE agent_commands SET status='failed',error_message=$1,updated_at=now() WHERE agent_turn_id=$2`, cause.Error(), turn.ID)
 	return err

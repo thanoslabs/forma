@@ -10,7 +10,7 @@ const projects:MentionTarget[]=[
  {kind:"project",id:"agent-automation",name:"Agent Automation"}
 ];
 export function ChatPanel({agents,messages,onSend,focusedMessageId,status,error}:{agents:SimAgent[];messages:ChatMessage[];onSend:(body:string,mentions:LinkedMention[])=>void;focusedMessageId?:string;status:"connecting"|"connected"|"sending"|"local";error?:string}) {
- const targets=useMemo<MentionTarget[]>(()=>[...agents.map(a=>({kind:"agent" as const,id:a.id,name:a.name})),...projects],[agents]);
+ const targets=useMemo<MentionTarget[]>(()=>[...agents.map(a=>({kind:"agent" as const,id:a.providerId??a.id,name:a.name,connectionId:a.connectionId})),...projects],[agents]);
  const [draft,setDraft]=useState(""),[caret,setCaret]=useState(0),[choice,setChoice]=useState(0);
  const input=useRef<HTMLTextAreaElement>(null);
  const match=activeMention(draft,caret),options=match?mentionOptions(match,targets):[];
@@ -44,7 +44,7 @@ export function ChatPanel({agents,messages,onSend,focusedMessageId,status,error}
    <div className="chat-message-meta"><strong>{m.author}</strong><small>{m.time}</small></div><p>{renderMessage(m)}</p>
   </article>)}</div>
   <div className="chat-compose">
-   {match&&options.length>0&&<div className="chat-suggestions" role="listbox" aria-label="Mention suggestions">{options.map((target,i)=><button type="button" role="option" aria-selected={choice===i} className={choice===i?"active":""} key={target.kind+target.id} onMouseDown={e=>e.preventDefault()} onClick={()=>select(target)}><span className="chat-kind">{target.kind}</span><strong>{target.name}</strong><small>@{target.kind}:{target.id}</small></button>)}</div>}
+   {match&&options.length>0&&<div className="chat-suggestions" role="listbox" aria-label="Mention suggestions">{options.map((target,i)=><button type="button" role="option" aria-selected={choice===i} className={choice===i?"active":""} key={target.kind+target.id+(target.connectionId??"")} onMouseDown={e=>e.preventDefault()} onClick={()=>select(target)}><span className="chat-kind">{target.kind}</span><strong>{target.name}</strong><small>@{target.kind}:{target.id}</small></button>)}</div>}
    <label htmlFor="office-chat-input" className="chat-label">Message</label>
    <textarea id="office-chat-input" ref={input} rows={2} value={draft} placeholder="Message the office… Try @Atlas or @project:Forma" onChange={e=>{setDraft(e.target.value);setCaret(e.target.selectionStart);setChoice(0);}} onClick={e=>setCaret(e.currentTarget.selectionStart)} onKeyUp={e=>{if(!["ArrowDown","ArrowUp","Enter","Escape"].includes(e.key))setCaret(e.currentTarget.selectionStart);}} onKeyDown={e=>{
     if(options.length&&e.key==="ArrowDown"){e.preventDefault();setChoice(i=>(i+1)%options.length);}

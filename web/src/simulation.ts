@@ -1,10 +1,10 @@
 import type { OfficeAgent, Position } from "./Office";
 
 export type SimStatus = "idle" | "walking" | "working" | "blocked" | "completed";
-export type SimAgent = OfficeAgent & { status: SimStatus; taskId?: string; progress: number; target: Position };
+export type SimAgent = OfficeAgent & { status: SimStatus; taskId?: string; progress: number; target: Position; providerId?:string; connectionId?:string; adapterId?:string };
 export type SimTask = { id: string; title: string; status: "queued" | "active" | "done"; agentId?: string };
 export type SimEvent = { id: number; tick: number; message: string; agentId?: string };
-export type SimState = { tick: number; agents: SimAgent[]; tasks: SimTask[]; events: SimEvent[]; running: boolean; speed: number; nextEvent: number };
+export type SimState = { tick: number; agents: SimAgent[]; tasks: SimTask[]; events: SimEvent[]; running: boolean; speed: number; nextEvent: number; source:"simulated"|"live" };
 const initialAgents: SimAgent[] = [
  { id:"atlas",name:"Atlas",status:"idle",position:{x:180,y:350},target:{x:180,y:350},progress:0,color:0x7e70cf },
  { id:"nova",name:"Nova",status:"idle",position:{x:430,y:350},target:{x:430,y:350},progress:0,color:0xe58d9a },
@@ -16,7 +16,7 @@ const initialTasks: SimTask[] = [
  {id:"docs",title:"Draft release notes",status:"queued"}
 ];
 export function initialSimulation(): SimState {
- return {tick:0,agents:initialAgents.map(a=>({...a,position:{...a.position},target:{...a.target}})),tasks:initialTasks.map(t=>({...t})),events:[],running:true,speed:1,nextEvent:1};
+ return {tick:0,agents:initialAgents.map(a=>({...a,position:{...a.position},target:{...a.target}})),tasks:initialTasks.map(t=>({...t})),events:[],running:true,speed:1,nextEvent:1,source:"simulated"};
 }
 export function addEvent(state: SimState,message:string,agentId?:string): SimState {
  return {...state,nextEvent:state.nextEvent+1,events:[{id:state.nextEvent,tick:state.tick,message,agentId},...state.events].slice(0,60)};
