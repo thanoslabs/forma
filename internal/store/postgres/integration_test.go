@@ -40,7 +40,7 @@ func TestWorkspaceConversationRoundTrip(t *testing.T) {
 		t.Fatalf("conversation: %#v %v", conversation, err)
 	}
 	message := conversations.Message{ID: newUUID(), ConversationID: conversationID, Body: "hello @Atlas", Author: conversations.Author{Kind: "user", ID: "integration-user", Name: "Integration User"}, Mentions: []conversations.Mention{{Kind: "agent", ID: "atlas", Name: "Atlas", Text: "@Atlas", Start: 6, End: 12}}, OccurredAt: time.Now().UTC()}
-	if _, err := store.CreateMessage(ctx, workspaceID, message); err != nil {
+	if _, created, err := store.CreateMessage(ctx, workspaceID, "integration-message", message); err != nil || !created {
 		t.Fatal(err)
 	}
 	messages, err := store.ListMessages(ctx, workspaceID, conversationID)

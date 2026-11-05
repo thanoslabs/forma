@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/thanoslabs/forma/internal/workspaces"
@@ -51,6 +52,15 @@ func (s *Store) ListConnections(ctx context.Context, workspaceID string) ([]work
 		result = append(result, connection)
 	}
 	return result, rows.Err()
+}
+
+func (s *Store) GetConnection(ctx context.Context, workspaceID, connectionID string) (workspaces.Connection, error) {
+	var connection workspaces.Connection
+	err := s.pool.QueryRow(ctx, `SELECT id, workspace_id, adapter_id, provider_type, display_name, created_at FROM connections WHERE workspace_id=$1 AND id=$2`, workspaceID, connectionID).Scan(&connection.ID, &connection.WorkspaceID, &connection.AdapterID, &connection.ProviderType, &connection.DisplayName, &connection.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return workspaces.Connection{}, workspaces.ErrNotFound
+	}
+	return connection, err
 }
 
 func (s *Store) CreateConnection(ctx context.Context, connection workspaces.Connection) (workspaces.Connection, error) {

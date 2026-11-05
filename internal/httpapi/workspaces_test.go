@@ -18,6 +18,7 @@ type memoryWorkspaceRepository struct {
 	connections   []workspaces.Connection
 	conversations []conversations.Conversation
 	messages      []conversations.Message
+	messageKeys   map[string]int
 }
 
 func (m *memoryWorkspaceRepository) ListConversations(_ context.Context, workspaceID string) ([]conversations.Conversation, error) {
@@ -51,16 +52,24 @@ func (m *memoryWorkspaceRepository) ListMessages(_ context.Context, workspaceID,
 	}
 	return result, nil
 }
-func (m *memoryWorkspaceRepository) CreateMessage(_ context.Context, workspaceID string, message conversations.Message) (conversations.Message, error) {
+func (m *memoryWorkspaceRepository) CreateMessage(_ context.Context, workspaceID, idempotencyKey string, message conversations.Message) (conversations.Message, bool, error) {
 	found := false
 	for _, item := range m.conversations {
 		found = found || item.ID == message.ConversationID && item.WorkspaceID == workspaceID
 	}
 	if !found {
-		return conversations.Message{}, conversations.ErrNotFound
+		return conversations.Message{}, false, conversations.ErrNotFound
 	}
+	if m.messageKeys == nil {
+		m.messageKeys = make(map[string]int)
+	}
+	key := message.ConversationID + ":" + idempotencyKey
+	if index, ok := m.messageKeys[key]; ok {
+		return m.messages[index], false, nil
+	}
+	m.messageKeys[key] = len(m.messages)
 	m.messages = append(m.messages, message)
-	return message, nil
+	return message, true, nil
 }
 
 func (m *memoryWorkspaceRepository) ListWorkspaces(context.Context) ([]workspaces.Workspace, error) {
@@ -79,6 +88,14 @@ func (m *memoryWorkspaceRepository) ListConnections(_ context.Context, workspace
 		}
 	}
 	return result, nil
+}
+func (m *memoryWorkspaceRepository) GetConnection(_ context.Context, workspaceID, connectionID string) (workspaces.Connection, error) {
+	for _, connection := range m.connections {
+		if connection.WorkspaceID == workspaceID && connection.ID == connectionID {
+			return connection, nil
+		}
+	}
+	return workspaces.Connection{}, workspaces.ErrNotFound
 }
 func (m *memoryWorkspaceRepository) CreateConnection(_ context.Context, connection workspaces.Connection) (workspaces.Connection, error) {
 	found := false

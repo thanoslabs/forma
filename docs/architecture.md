@@ -31,6 +31,8 @@ Commands have idempotency keys, authorized actor, target capability, pending/acc
 
 Conversation WebSockets replay the persisted message timeline before emitting in-process updates. PostgreSQL remains authoritative; the in-process broker is deliberately bounded and slow subscribers reconnect for replay. Multi-replica deployments will add LISTEN/NOTIFY as a wake-up mechanism without replacing durable history.
 
+Persisted message writes require an `Idempotency-Key`. An agent mention is dispatchable only when it includes both the provider agent ID and its Forma connection ID; a display-name mention alone is inert. Forma records an `agent_turn` and `agent_command` before invoking an input-capable adapter, then persists the correlated reply or failure. Replaying the same message key returns the original message without invoking the adapter again.
+
 ## Security
 Credentials are encrypted at rest and never sent to the browser. Provider permissions and Forma RBAC are checked before dispatch. External adapters are authenticated and constrained by workspace/provider scope. No arbitrary uploaded code runs in the Forma server. Asset packs are declarative, subject to size/type/path validation, and served under restrictive content security policies. Default deployment is private, with OIDC and explicit trusted origins before multi-user access.
 

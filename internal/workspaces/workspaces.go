@@ -28,4 +28,5 @@ type Repository interface {
 	CreateWorkspace(ctx context.Context, workspace Workspace) (Workspace, error)
 	ListConnections(ctx context.Context, workspaceID string) ([]Connection, error)
 	CreateConnection(ctx context.Context, connection Connection) (Connection, error)
+	GetConnection(ctx context.Context, workspaceID, connectionID string) (Connection, error)
 }

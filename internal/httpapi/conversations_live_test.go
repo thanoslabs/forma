@@ -41,6 +41,7 @@ func TestConversationWebSocketReplaysAndStreams(t *testing.T) {
 
 	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, server.URL+"/api/v1/workspaces/workspace-1/conversations/conversation-1/messages", bytes.NewBufferString(`{"body":"live","mentions":[]}`))
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Idempotency-Key", "live-message")
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		t.Fatal(err)

@@ -11,9 +11,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	formadb "github.com/thanoslabs/forma/db"
+	"github.com/thanoslabs/forma/internal/adapters/agents/mock"
 	"github.com/thanoslabs/forma/internal/httpapi"
 	"github.com/thanoslabs/forma/internal/realtime"
 	"github.com/thanoslabs/forma/internal/store/postgres"
+	"github.com/thanoslabs/forma/internal/turns"
 )
 
 func main() {
@@ -38,7 +40,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	store := postgres.New(pool)
-	httpapi.New(store, store, realtime.New()).Register(mux)
+	live := realtime.New()
+	router := turns.NewRouter(store, store, turns.NewRegistry(mock.New()), live)
+	httpapi.New(store, store, live, router).Register(mux)
 	if os.Getenv("FORMA_ENABLE_DEMO_API") == "true" {
 		httpapi.NewMockAPI().Register(mux)
 	}

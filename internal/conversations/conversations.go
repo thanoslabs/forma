@@ -21,12 +21,13 @@ type Author struct {
 	Name string `json:"name"`
 }
 type Mention struct {
-	Kind  string `json:"kind"`
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Text  string `json:"text"`
-	Start int    `json:"start"`
-	End   int    `json:"end"`
+	Kind         string `json:"kind"`
+	ID           string `json:"id"`
+	ConnectionID string `json:"connectionId,omitempty"`
+	Name         string `json:"name"`
+	Text         string `json:"text"`
+	Start        int    `json:"start"`
+	End          int    `json:"end"`
 }
 type Message struct {
 	ID               string    `json:"id"`
@@ -41,5 +42,5 @@ type Repository interface {
 	ListConversations(context.Context, string) ([]Conversation, error)
 	CreateConversation(context.Context, Conversation) (Conversation, error)
 	ListMessages(context.Context, string, string) ([]Message, error)
-	CreateMessage(context.Context, string, Message) (Message, error)
+	CreateMessage(context.Context, string, string, Message) (Message, bool, error)
 }

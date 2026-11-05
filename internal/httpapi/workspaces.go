@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -14,19 +15,28 @@ import (
 	"github.com/thanoslabs/forma/internal/workspaces"
 )
 
+type MessageRouter interface {
+	Route(context.Context, string, string, conversations.Message) error
+}
+
 type API struct {
 	workspaces    workspaces.Repository
 	conversations conversations.Repository
 	live          *realtime.Broker
+	router        MessageRouter
 }
 
 const writeTimeout = 10 * time.Second
 
-func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository, live *realtime.Broker) *API {
+func New(workspaceRepository workspaces.Repository, conversationRepository conversations.Repository, live *realtime.Broker, routers ...MessageRouter) *API {
 	if live == nil {
 		live = realtime.New()
 	}
-	return &API{workspaces: workspaceRepository, conversations: conversationRepository, live: live}
+	api := &API{workspaces: workspaceRepository, conversations: conversationRepository, live: live}
+	if len(routers) > 0 {
+		api.router = routers[0]
+	}
+	return api
 }
 
 func (a *API) Register(mux *http.ServeMux) {
