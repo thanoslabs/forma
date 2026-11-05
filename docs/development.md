@@ -1,10 +1,11 @@
 # Development
 
-Requires Go 1.24+, Docker Compose and psql.
+Install the exact Go and Node versions from `.tool-versions` with mise or asdf. Docker Compose and `psql` are also required.
 
 1. Run `make dev-up`.
 2. Run `make migrate-up` (uses local development credentials; never use these in production).
 3. Run `make run`.
-4. Check `http://localhost:8080/healthz` and `/readyz`.
+4. Run `cd web && npm ci && npm run dev`.
+5. Open `http://127.0.0.1:5173` and check `http://localhost:8080/healthz` and `/readyz`.
 
-This is an initial backend foundation, not a finished M1. Before production, add managed migration versioning, authentication, encrypted connection credentials, integration tests, event replay and a frontend. The database schema is provisional and will evolve with adapter contracts.
+Set `FORMA_ENABLE_DEMO_API=true` only for local development. The demo routes are intentionally unauthenticated. Before production, add managed migration versioning, authentication, encrypted connection credentials, integration tests, and durable event replay. The database schema remains provisional and will evolve with the adapter contracts.
