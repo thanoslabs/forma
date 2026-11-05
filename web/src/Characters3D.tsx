@@ -114,19 +114,20 @@ export function OfficeCharacters({agents,playerState,selectedId}:{agents:OfficeA
   const selection=new THREE.Mesh(new THREE.RingGeometry(0.55,0.69,48),new THREE.MeshBasicMaterial({color:0x8d65ee,transparent:true,opacity:0.9,side:THREE.DoubleSide,depthTest:false}));
   selection.scale.y=0.38;selection.renderOrder=10;selection.visible=false;scene.add(selection);
   const player=createCharacter("explorer");scene.add(player.root);player.root.scale.setScalar(0.46);player.root.position.set(-6.4,-3.4,0);
-  const clock=new THREE.Clock();let frame=0;
+  const clock=new THREE.Clock();let frame=0,elapsed=0;
   const animate=()=>{
    frame=requestAnimationFrame(animate);
-   const t=clock.getElapsedTime(),ids=new Set(latest.current.agents.map(a=>a.id));
+   const dt=Math.min(0.05,clock.getDelta());elapsed+=dt;
+   const t=elapsed,ids=new Set(latest.current.agents.map(a=>a.id));
    for(const [id,entry] of models)if(!ids.has(id)){scene.remove(entry.puppet.root);models.delete(id);}
    selection.visible=false;
-   const frameStep=Math.min(1,clock.getDelta()*9);
+   const frameStep=Math.min(1,dt*9);
    for(const agent of latest.current.agents){
     let entry=models.get(agent.id);
     if(!entry){const puppet=createCharacter("agent",agent.color??0x9271d6);scene.add(puppet.root);entry={puppet,x:agent.position.x,y:agent.position.y,initialized:true};models.set(agent.id,entry);}
     const dx=agent.position.x-entry.x,dy=agent.position.y-entry.y;
     const moving=Math.hypot(dx,dy)>0.8;
-    const step=frameStep;\n    entry.x+=dx*step;entry.y+=dy*step;
+    entry.x+=dx*frameStep;entry.y+=dy*frameStep;
     entry.puppet.root.position.x=(entry.x-430)/50;
     entry.puppet.root.position.z=0;
     entry.puppet.root.position.y=(245-entry.y)/50-0.55;
