@@ -6,6 +6,7 @@ Forma is a self-hostable virtual office where people can observe, organize, and 
 
 - [[architecture]] explains the system boundaries and canonical model.
 - [[integrations]] defines agent, project, and chat provider contracts.
+- [[conversations]] defines canonical messages, agent turns, and external delivery.
 - [[roadmap]] tracks the path from the current demo to a multi-user deployment.
 - [[development]] explains how to run the service and web client locally.
 - [[interactive-demo]] documents the browser-based office prototype.

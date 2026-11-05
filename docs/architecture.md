@@ -17,13 +17,14 @@ Forma is a self-hostable, browser-based visual control plane for agents and proj
 | --- | --- |
 | Agent identity, session, runtime health | Agent harness |
 | Project, work item, native assignment, workflow state | Project provider |
-| Connection configuration, local workspace, visual layout, execution correlation, event history | Forma |
+| Connection configuration, local workspace, conversations, visual layout, execution correlation, event history | Forma |
+| Native channel, thread, user and message identity | Chat provider |
 | Work-item claim and lease when using Overwatch | Overwatch |
 
 Forma may cache external resources as projections with provider IDs, sync timestamps and staleness markers. Disconnection must not imply idle state.
 
 ## Domain model
-Workspace contains Connections and Rooms. A Connection identifies a provider and stores server-side credentials. AgentRef = (connection_id, provider_agent_id); SessionRef = (connection_id, provider_session_id). WorkItemRef = (connection_id, provider_item_id). Execution records correlate one or more sessions to a work item, with explicit attempt numbers and idempotency keys. Events are append-only and carry source, provider event ID, observed timestamp, received timestamp, schema version, and correlation IDs. Avatar and room placement belong to Forma and do not mutate provider state.
+Workspace contains Connections, Rooms and Conversations. A Connection identifies a provider and stores server-side credentials. AgentRef = (connection_id, provider_agent_id); SessionRef = (connection_id, provider_session_id). WorkItemRef = (connection_id, provider_item_id). ChatMessageRef = (connection_id, provider_message_id). Execution records correlate one or more sessions to a work item or agent turn, with explicit attempt numbers and idempotency keys. Events are append-only and carry source, provider event ID, observed timestamp, received timestamp, schema version, and correlation IDs. Avatar and room placement belong to Forma and do not mutate provider state.
 
 ## Commands and reconciliation
 Commands have idempotency keys, authorized actor, target capability, pending/accepted/failed outcome and traceable provider response. Never treat an accepted dispatch as a successful execution. Adapter streams/webhooks are preferred, polling is a fallback. Durable cursors, periodic reconciliation, duplicate suppression and bounded retries are required. PostgreSQL event log is durable; LISTEN/NOTIFY may wake subscribers but must not be used as the sole event store.
