@@ -18,11 +18,7 @@ import "./immersive.css";
 import { LayoutEditor } from "./LayoutEditor";
 import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
 
-const sections = [
-  { name: "Office", description: "An interactive simulation of your agent workspace. All activity is fictional." },
-  { name: "Agents", description: "Connect a harness to discover agents and inspect their sessions." },
-  { name: "Projects", description: "Connect Overwatch or another project provider to view work." },
-];
+type WorkspacePanel = "chat" | "agents" | "projects" | "activity" | "settings" | null;
 
 function App() {
   const [panel,setPanel] = React.useState<WorkspacePanel>(null);
