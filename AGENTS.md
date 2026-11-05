@@ -8,7 +8,7 @@ Forma is a self-hostable, browser-based virtual office for observing, organizing
 
 - **Go 1.24** with pgx and PostgreSQL
 - **React 19 + TypeScript + Vite**
-- **PixiJS + Three.js** for the office world
+- **PixiJS** for the 2.5D office world
 - **GitHub Actions** for CI, Pages, Renovate, and releases
 - **[nebula-md](https://github.com/thanoslabs/nebula-md)** conventions for `docs/`
 - **MIT License**
