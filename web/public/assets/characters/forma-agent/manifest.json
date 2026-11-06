@@ -1,11 +1,11 @@
 {
   "version": 1,
   "image": "atlas.png",
-  "frameWidth": 300,
-  "frameHeight": 300,
-  "columns": ["southwest", "southeast", "northwest", "northeast"],
-  "rows": ["idle", "walkA", "walkB", "sit", "work"],
-  "framesPerSecond": 6,
-  "groundAnchor": { "x": 0.5, "y": 0.88 },
-  "headAnchor": { "x": 0.5, "y": 0.18 }
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "columns": [0, 1, 2, 3],
+  "rows": ["idle", "action"],
+  "framesPerSecond": 4,
+  "groundAnchor": { "x": 0.5, "y": 0.82 },
+  "source": "https://github.com/j6nca/schmove/tree/main/project/assets/sprites"
 }
