@@ -24,12 +24,17 @@ type AgentProjectionReader interface {
 	ListAgents(context.Context, string) ([]projections.Agent, error)
 }
 
+type ConnectionTester interface {
+	CheckConnection(context.Context, string, string) (projections.ConnectionCheck, error)
+}
+
 type API struct {
-	workspaces    workspaces.Repository
-	conversations conversations.Repository
-	live          *realtime.Broker
-	router        MessageRouter
-	agents        AgentProjectionReader
+	workspaces       workspaces.Repository
+	conversations    conversations.Repository
+	live             *realtime.Broker
+	router           MessageRouter
+	agents           AgentProjectionReader
+	connectionTester ConnectionTester
 }
 
 const writeTimeout = 10 * time.Second
@@ -50,13 +55,36 @@ func (a *API) WithAgentProjections(reader AgentProjectionReader) *API {
 	return a
 }
 
+func (a *API) WithConnectionTester(tester ConnectionTester) *API {
+	a.connectionTester = tester
+	return a
+}
+
 func (a *API) Register(mux *http.ServeMux) {
 	a.registerConversations(mux)
 	mux.HandleFunc("GET /api/v1/workspaces", a.listWorkspaces)
 	mux.HandleFunc("POST /api/v1/workspaces", a.createWorkspace)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections", a.listConnections)
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections", a.createConnection)
+	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections/{connectionID}/test", a.testConnection)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents", a.listAgents)
+}
+
+func (a *API) testConnection(w http.ResponseWriter, r *http.Request) {
+	if a.connectionTester == nil {
+		http.Error(w, "connection testing is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	check, err := a.connectionTester.CheckConnection(r.Context(), r.PathValue("workspaceID"), r.PathValue("connectionID"))
+	if errors.Is(err, workspaces.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "provider connection failed: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	respond(w, check)
 }
 
 func (a *API) listAgents(w http.ResponseWriter, r *http.Request) {

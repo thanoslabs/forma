@@ -70,7 +70,8 @@ func main() {
 		return paseo.New(paseo.Config{URL: connection.EndpointURL, Password: connection.Credential})
 	})
 	router := turns.NewRouter(store, store, registry, live)
-	httpapi.New(store, store, live, router).WithAgentProjections(projections.NewAgentReader(store, registry)).Register(mux)
+	agentReader := projections.NewAgentReader(store, registry)
+	httpapi.New(store, store, live, router).WithAgentProjections(agentReader).WithConnectionTester(agentReader).Register(mux)
 	if settings.EnableDemoAPI {
 		httpapi.NewMockAPI().Register(mux)
 	}

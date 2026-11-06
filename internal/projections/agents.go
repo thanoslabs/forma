@@ -21,6 +21,14 @@ type Agent struct {
 	LastSeen     time.Time     `json:"lastSeen"`
 }
 
+type ConnectionCheck struct {
+	ConnectionID string              `json:"connectionId"`
+	Status       string              `json:"status"`
+	AgentCount   int                 `json:"agentCount"`
+	Capabilities []agents.Capability `json:"capabilities"`
+	CheckedAt    time.Time           `json:"checkedAt"`
+}
+
 type AgentReader struct {
 	connections workspaces.Repository
 	registry    *turns.Registry
@@ -61,4 +69,23 @@ func (r *AgentReader) ListAgents(ctx context.Context, workspaceID string) ([]Age
 		}
 	}
 	return result, errors.Join(readErrors...)
+}
+
+func (r *AgentReader) CheckConnection(ctx context.Context, workspaceID, connectionID string) (ConnectionCheck, error) {
+	connection, err := r.connections.GetConnection(ctx, workspaceID, connectionID)
+	if err != nil {
+		return ConnectionCheck{}, err
+	}
+	if connection.ProviderType != "agent" {
+		return ConnectionCheck{}, fmt.Errorf("connection %s is not an agent provider", connectionID)
+	}
+	adapter, err := r.registry.Resolve(ctx, connection)
+	if err != nil {
+		return ConnectionCheck{}, err
+	}
+	found, err := adapter.ListAgents(ctx)
+	if err != nil {
+		return ConnectionCheck{}, err
+	}
+	return ConnectionCheck{ConnectionID: connectionID, Status: "connected", AgentCount: len(found), Capabilities: adapter.Capabilities(), CheckedAt: time.Now().UTC()}, nil
 }
