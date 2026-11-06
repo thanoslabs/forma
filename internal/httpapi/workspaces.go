@@ -15,6 +15,7 @@ import (
 	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/realtime"
 	"github.com/thanoslabs/forma/internal/workspaces"
+	"github.com/thanoslabs/forma/internal/worlds"
 )
 
 type MessageRouter interface {
@@ -47,6 +48,7 @@ type API struct {
 	connectionTester ConnectionTester
 	agentDetails     AgentDetailReader
 	projects         ProjectProjectionReader
+	worlds           worlds.Repository
 }
 
 const writeTimeout = 10 * time.Second
@@ -82,6 +84,11 @@ func (a *API) WithProjectProjections(reader ProjectProjectionReader) *API {
 	return a
 }
 
+func (a *API) WithWorlds(repository worlds.Repository) *API {
+	a.worlds = repository
+	return a
+}
+
 func (a *API) Register(mux *http.ServeMux) {
 	a.registerConversations(mux)
 	mux.HandleFunc("GET /api/v1/workspaces", a.listWorkspaces)
@@ -94,6 +101,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/agents/{agentID}", a.getAgent)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/projects", a.listProjects)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/projects/{projectID}/items", a.listWorkItems)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/world", a.getWorld)
+	mux.HandleFunc("PUT /api/v1/workspaces/{workspaceID}/world", a.putWorld)
 }
 
 func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
