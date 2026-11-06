@@ -26,6 +26,8 @@ Forma may cache external resources as projections with provider IDs, sync timest
 ## Domain model
 Workspace contains Connections, Rooms and Conversations. A Connection identifies a provider and stores server-side credentials. AgentRef = (connection_id, provider_agent_id); SessionRef = (connection_id, provider_session_id). WorkItemRef = (connection_id, provider_item_id). ChatMessageRef = (connection_id, provider_message_id). Execution records correlate one or more sessions to a work item or agent turn, with explicit attempt numbers and idempotency keys. Events are append-only and carry source, provider event ID, observed timestamp, received timestamp, schema version, and correlation IDs. Avatar and room placement belong to Forma and do not mutate provider state.
 
+Workspace world configuration is also Forma-owned. Versioned desk coordinates are stored per workspace and loaded whenever a user changes floors, so spatial customization is shared without leaking into agent or project provider state.
+
 ## Commands and reconciliation
 Commands have idempotency keys, authorized actor, target capability, pending/accepted/failed outcome and traceable provider response. Never treat an accepted dispatch as a successful execution. Adapter streams/webhooks are preferred, polling is a fallback. Durable cursors, periodic reconciliation, duplicate suppression and bounded retries are required. PostgreSQL event log is durable; LISTEN/NOTIFY may wake subscribers but must not be used as the sole event store.
 

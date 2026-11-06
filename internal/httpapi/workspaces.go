@@ -10,10 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/thanoslabs/forma/internal/adapters/projects"
 	"github.com/thanoslabs/forma/internal/conversations"
 	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/realtime"
 	"github.com/thanoslabs/forma/internal/workspaces"
+	"github.com/thanoslabs/forma/internal/worlds"
 )
 
 type MessageRouter interface {
@@ -28,6 +30,15 @@ type ConnectionTester interface {
 	CheckConnection(context.Context, string, string) (projections.ConnectionCheck, error)
 }
 
+type AgentDetailReader interface {
+	GetAgent(context.Context, string, string, string) (projections.AgentDetail, error)
+}
+
+type ProjectProjectionReader interface {
+	ListProjects(context.Context, string) ([]projections.Project, error)
+	ListWorkItems(context.Context, string, string, string) ([]projects.WorkItem, error)
+}
+
 type API struct {
 	workspaces       workspaces.Repository
 	conversations    conversations.Repository
@@ -35,6 +46,9 @@ type API struct {
 	router           MessageRouter
 	agents           AgentProjectionReader
 	connectionTester ConnectionTester
+	agentDetails     AgentDetailReader
+	projects         ProjectProjectionReader
+	worlds           worlds.Repository
 }
 
 const writeTimeout = 10 * time.Second
@@ -60,6 +74,21 @@ func (a *API) WithConnectionTester(tester ConnectionTester) *API {
 	return a
 }
 
+func (a *API) WithAgentDetails(reader AgentDetailReader) *API {
+	a.agentDetails = reader
+	return a
+}
+
+func (a *API) WithProjectProjections(reader ProjectProjectionReader) *API {
+	a.projects = reader
+	return a
+}
+
+func (a *API) WithWorlds(repository worlds.Repository) *API {
+	a.worlds = repository
+	return a
+}
+
 func (a *API) Register(mux *http.ServeMux) {
 	a.registerConversations(mux)
 	mux.HandleFunc("GET /api/v1/workspaces", a.listWorkspaces)
@@ -69,6 +98,58 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections/{connectionID}/test", a.testConnection)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents", a.listAgents)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents/ws", a.streamAgents)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/agents/{agentID}", a.getAgent)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/projects", a.listProjects)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/projects/{projectID}/items", a.listWorkItems)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/world", a.getWorld)
+	mux.HandleFunc("PUT /api/v1/workspaces/{workspaceID}/world", a.putWorld)
+}
+
+func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
+	if a.projects == nil {
+		http.Error(w, "project projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	items, err := a.projects.ListProjects(r.Context(), r.PathValue("workspaceID"))
+	if err != nil {
+		http.Error(w, "unable to load projects", http.StatusBadGateway)
+		return
+	}
+	respond(w, items)
+}
+
+func (a *API) listWorkItems(w http.ResponseWriter, r *http.Request) {
+	if a.projects == nil {
+		http.Error(w, "project projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	items, err := a.projects.ListWorkItems(r.Context(), r.PathValue("workspaceID"), r.PathValue("connectionID"), r.PathValue("projectID"))
+	if errors.Is(err, workspaces.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "unable to load work items", http.StatusBadGateway)
+		return
+	}
+	respond(w, items)
+}
+
+func (a *API) getAgent(w http.ResponseWriter, r *http.Request) {
+	if a.agentDetails == nil {
+		http.Error(w, "agent details are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	detail, err := a.agentDetails.GetAgent(r.Context(), r.PathValue("workspaceID"), r.PathValue("connectionID"), r.PathValue("agentID"))
+	if errors.Is(err, workspaces.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "unable to load agent details", http.StatusBadGateway)
+		return
+	}
+	respond(w, detail)
 }
 
 func (a *API) testConnection(w http.ResponseWriter, r *http.Request) {
