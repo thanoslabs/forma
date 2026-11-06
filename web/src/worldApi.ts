@@ -1,0 +1,4 @@
+import{validateLayout,type OfficeLayout}from"./layout";
+
+export async function getWorld(workspaceId:string,signal?:AbortSignal):Promise<OfficeLayout>{const response=await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/world`,{signal});if(response.status===404)throw new Error("World configuration not found");if(!response.ok)throw new Error((await response.text()).trim()||"Unable to load world");return validateLayout(await response.json())}
+export async function putWorld(workspaceId:string,layout:OfficeLayout):Promise<OfficeLayout>{const response=await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/world`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(validateLayout(layout))});if(!response.ok)throw new Error((await response.text()).trim()||"Unable to save world");return validateLayout(await response.json())}

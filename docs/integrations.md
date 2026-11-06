@@ -15,10 +15,14 @@ Chat ingestion verifies provider signatures before accepting an event, stores a 
 ## Overwatch first
 Overwatch already exposes /api/v1, /openapi.yaml, scoped bearer tokens, and MCP at /mcp. Its documented agent workflow supports claim-next, heartbeat, update-task, and release-task. Overwatch owns work claims, 15-minute default leases and retry policies; Forma must not create competing leases. Use the REST API for strongly typed integration initially, reserving MCP as an optional transport. Validate precise endpoints and response schemas against Overwatch's OpenAPI before implementation.
 
+Forma's initial read integration uses the documented `GET /api/v1/repositories` and `GET /api/v1/issues?repository_id=…` operations. Add an Overwatch project connection in workspace settings with its server root and a scoped bearer token; repositories and issues then appear in the Projects panel. Claim and lease mutations remain an explicit follow-up so Overwatch stays authoritative for ownership and retries.
+
 ## Harnesses
 Paseo is the first target harness. Forma connects directly to the Paseo daemon's version 1 WebSocket protocol, authenticates with the protocol `hello`, discovers agents with `fetch_agents_request`, and sends prompts with `send_agent_message_request`. The Forma command idempotency key is passed as Paseo's client-provided `messageId`.
 
 Create an agent connection whose `adapterId` is `paseo`, `endpointUrl` is the daemon WebSocket endpoint, and write-only `credential` is its password when required. Forma encrypts the credential before storing it and resolves a connection-scoped Paseo adapter at runtime. `FORMA_PASEO_URL` and `FORMA_PASEO_PASSWORD` remain a development fallback.
+
+The workspace Settings panel provides this onboarding flow. **Test & discover** resolves the stored adapter, performs a live agent listing, and reports capabilities and discovered agent count without returning the credential to the browser.
 
 Paseo prompt acceptance is asynchronous. Forma marks the command and turn accepted after Paseo acknowledges it; it does not fabricate an agent reply. A later projection/event layer will correlate completed Paseo turns back into the conversation timeline. The deterministic mock harness remains available for synchronous UI and adapter conformance tests.
 

@@ -10,8 +10,15 @@ import (
 	"time"
 
 	"github.com/thanoslabs/forma/internal/conversations"
+	"github.com/thanoslabs/forma/internal/projections"
 	"github.com/thanoslabs/forma/internal/workspaces"
 )
+
+type connectionTesterFunc func(context.Context, string, string) (projections.ConnectionCheck, error)
+
+func (f connectionTesterFunc) CheckConnection(ctx context.Context, workspaceID, connectionID string) (projections.ConnectionCheck, error) {
+	return f(ctx, workspaceID, connectionID)
+}
 
 type memoryWorkspaceRepository struct {
 	workspaces    []workspaces.Workspace
@@ -156,5 +163,22 @@ func TestWorkspaceAPIRejectsInvalidConnection(t *testing.T) {
 	mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", recorder.Code)
+	}
+}
+
+func TestWorkspaceAPIConnectionTest(t *testing.T) {
+	mux := http.NewServeMux()
+	repository := &memoryWorkspaceRepository{}
+	tester := connectionTesterFunc(func(_ context.Context, workspaceID, connectionID string) (projections.ConnectionCheck, error) {
+		if workspaceID != "workspace-1" || connectionID != "connection-1" {
+			t.Fatalf("scope %s %s", workspaceID, connectionID)
+		}
+		return projections.ConnectionCheck{ConnectionID: connectionID, Status: "connected", AgentCount: 3}, nil
+	})
+	New(repository, repository, nil).WithConnectionTester(tester).Register(mux)
+	recorder := httptest.NewRecorder()
+	mux.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/workspace-1/connections/connection-1/test", nil))
+	if recorder.Code != http.StatusOK || !bytes.Contains(recorder.Body.Bytes(), []byte(`"agentCount":3`)) {
+		t.Fatalf("test connection: %d %s", recorder.Code, recorder.Body.String())
 	}
 }

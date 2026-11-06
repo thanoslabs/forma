@@ -52,3 +52,19 @@ func TestAgentReaderScopesAndAnnotatesProviderAgents(t *testing.T) {
 		}
 	}
 }
+
+func TestAgentReaderChecksConnectionCapabilitiesAndDiscovery(t *testing.T) {
+	reader := NewAgentReader(repository{connections: []workspaces.Connection{{ID: "agents-1", WorkspaceID: "workspace-1", AdapterID: "mock", ProviderType: "agent"}}}, turns.NewRegistry(mock.New()))
+	check, err := reader.CheckConnection(context.Background(), "workspace-1", "agents-1")
+	if err != nil || check.Status != "connected" || check.AgentCount != 3 || len(check.Capabilities) == 0 || check.CheckedAt.IsZero() {
+		t.Fatalf("check=%#v err=%v", check, err)
+	}
+}
+
+func TestAgentReaderReturnsProviderNeutralDetail(t *testing.T) {
+	reader := NewAgentReader(repository{connections: []workspaces.Connection{{ID: "agents-1", WorkspaceID: "workspace-1", AdapterID: "mock", ProviderType: "agent"}}}, turns.NewRegistry(mock.New()))
+	detail, err := reader.GetAgent(context.Background(), "workspace-1", "agents-1", "atlas")
+	if err != nil || detail.Agent.ID != "atlas" || len(detail.Capabilities) == 0 || detail.Sessions == nil {
+		t.Fatalf("detail=%#v err=%v", detail, err)
+	}
+}

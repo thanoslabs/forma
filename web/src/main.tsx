@@ -6,7 +6,6 @@ import "./demo.css";
 import { Office } from "./Office";
 import { usePlayerMovement } from "./playerMovement";
 import { useSimulation } from "./useSimulation";
-import { OfficePanels } from "./OfficePanels";
 import { ChatPanel, type ChatMessage } from "./ChatPanel";
 import { SpeechBubbles } from "./SpeechBubbles";
 import type { SpeechBubble } from "./speech";
@@ -16,29 +15,35 @@ import "./layout.css";
 import "./immersive.css";
 import "./elevator.css";
 import { LayoutEditor } from "./LayoutEditor";
-import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
+import { defaultLayout } from "./layout";
 import { ensureDefaultConversation,ensureWorkspaceConversation,listWorkspaces, listConversationMessages, sendConversationMessage, watchConversationMessages, type ConversationMessage, type ConversationScope,type Workspace } from "./conversationApi";
-import {listWorkspaceAgents} from "./agentApi";
+import {listWorkspaceAgents,watchWorkspaceAgents} from "./agentApi";
 import{DEMO_WORKSPACES,ELEVATOR_TILE,sceneSpawn,STREET_SCENE,streetBlockedTiles,workspaceScenes}from"./scenes";
 import{tileKey,worldToTile}from"./worldGrid";
+import{ConnectionManager}from"./ConnectionManager";
+import{AgentInspector}from"./AgentInspector";
+import{ProjectPanel}from"./ProjectPanel";
+import{getWorld,putWorld}from"./worldApi";
 
 type WorkspacePanel = "chat" | "agents" | "projects" | "activity" | "settings"|"elevator" | null;
 
 function App() {
   const [panel,setPanel] = React.useState<WorkspacePanel>(null);
-  const [layout,setLayout] = React.useState(loadLayout);
+  const [layout,setLayout] = React.useState(defaultLayout),[layoutWorkspace,setLayoutWorkspace]=React.useState<string>();
   const { state, dispatch } = useSimulation();
   const [selectedAgent,setSelectedAgent] = React.useState<string | undefined>();
   const [workspaces,setWorkspaces]=React.useState<Workspace[]>([]),[activeWorkspaceId,setActiveWorkspaceId]=React.useState<string>(),[activeSceneId,setActiveSceneId]=React.useState<string>();
   const floorScenes=React.useMemo(()=>workspaceScenes(workspaces),[workspaces]),scenes=React.useMemo(()=>[...floorScenes,STREET_SCENE],[floorScenes]),activeScene=scenes.find(scene=>scene.id===activeSceneId)??floorScenes[0];
   const occupiedSeats=React.useMemo(()=>new Set(state.agents.filter(agent=>agent.pose==="work"||agent.pose==="sit").map(agent=>agent.workstationId).filter((id):id is string=>!!id)),[state.agents]);
+  const selectedAgentModel=state.agents.find(agent=>agent.id===selectedAgent);
   const sceneDesks=activeScene?.kind==="street"?[]:layout.desks,environmentBlocked=React.useMemo(()=>activeScene?.kind==="street"?streetBlockedTiles():new Set<string>(),[activeScene?.kind]);
   const playerState=usePlayerMovement(sceneDesks,panel===null,occupiedSeats,activeScene?.id??"loading",activeScene?sceneSpawn(activeScene):undefined,environmentBlocked);
-  React.useEffect(()=>saveLayout(layout),[layout]);
+  React.useEffect(()=>{if(!activeWorkspaceId)return;const controller=new AbortController();setLayout(defaultLayout);setLayoutWorkspace(undefined);void getWorld(activeWorkspaceId,controller.signal).then(found=>{setLayout(found);setLayoutWorkspace(activeWorkspaceId)}).catch(()=>{if(!controller.signal.aborted)setLayoutWorkspace(activeWorkspaceId)});return()=>controller.abort()},[activeWorkspaceId]);
   const [messages,setMessages]=React.useState<ChatMessage[]>([{id:"welcome",author:"Forma",body:"Welcome to the shared office conversation. Messages are persisted when the Forma service is connected.",mentions:[],time:""}]);
   const [conversationScope,setConversationScope]=React.useState<ConversationScope>();
   const [chatStatus,setChatStatus]=React.useState<"connecting"|"connected"|"sending"|"local">("connecting");
   const [chatError,setChatError]=React.useState<string>();
+  React.useEffect(()=>{if(!activeWorkspaceId||layoutWorkspace!==activeWorkspaceId||chatStatus==="local")return;const timer=window.setTimeout(()=>void putWorld(activeWorkspaceId,layout).catch(()=>{}),500);return()=>window.clearTimeout(timer)},[activeWorkspaceId,layout,layoutWorkspace,chatStatus]);
   const [bubbles,setBubbles]=React.useState<SpeechBubble[]>([]);
   const [focusedMessageId,setFocusedMessageId]=React.useState<string>();
   const playerPosition=React.useRef(playerState.position);
@@ -67,9 +72,9 @@ function App() {
   },[activeWorkspaceId,toChatMessage]);
   React.useEffect(()=>{
     if(!conversationScope)return;
-    const controller=new AbortController();
-    const refresh=()=>void listWorkspaceAgents(conversationScope.workspaceId,controller.signal).then(agents=>dispatch({type:"projectAgents",agents})).catch(()=>{});
-    refresh();const timer=window.setInterval(refresh,5000);return()=>{controller.abort();window.clearInterval(timer);};
+    const controller=new AbortController();let stop:undefined|(()=>void);
+    void listWorkspaceAgents(conversationScope.workspaceId,controller.signal).then(agents=>{dispatch({type:"projectAgents",agents});stop=watchWorkspaceAgents(conversationScope.workspaceId,updated=>dispatch({type:"projectAgents",agents:updated}),()=>setChatError("Live agent updates disconnected. Reopen the floor to reconnect."));}).catch(()=>{});
+    return()=>{controller.abort();stop?.();};
   },[conversationScope,dispatch]);
   React.useEffect(()=>{if(activeScene?.kind==="office"&&tileKey(worldToTile(playerState.position))===tileKey(ELEVATOR_TILE)&&!playerState.seated)setPanel("elevator");},[activeScene?.kind,playerState.position,playerState.seated]);
   const selectFloor=(workspaceId:string)=>{setActiveSceneId(`workspace:${workspaceId}`);setActiveWorkspaceId(workspaceId);setConversationScope(undefined);setSelectedAgent(undefined);setMessages([]);setBubbles([]);if(chatStatus!=="local"){dispatch({type:"projectAgents",agents:[]});setChatStatus("connecting");}setPanel(null);};
@@ -105,7 +110,7 @@ function App() {
   return <div className="office-app">
     <div className="office-world" aria-label="Forma office workspace">
       <div className="office-world-stage">
-        <Office agents={activeScene?.kind==="street"?[]:state.agents} playerState={playerState} sceneKind={activeScene?.kind} deskPositions={sceneDesks} selectedId={selectedAgent} onSelect={setSelectedAgent} onOpenProjects={()=>setPanel("projects")} onOpenElevator={()=>setPanel("elevator")} onEnterBuilding={()=>setPanel("elevator")} onDeselect={()=>setSelectedAgent(undefined)} onMove={(agentId,p)=>dispatch({type:"move",agentId,x:p.x,y:p.y})}/>
+        <Office agents={activeScene?.kind==="street"?[]:state.agents} playerState={playerState} sceneKind={activeScene?.kind} deskPositions={sceneDesks} selectedId={selectedAgent} onSelect={id=>{setSelectedAgent(id);setPanel("agents")}} onOpenProjects={()=>setPanel("projects")} onOpenElevator={()=>setPanel("elevator")} onEnterBuilding={()=>setPanel("elevator")} onDeselect={()=>setSelectedAgent(undefined)} onMove={(agentId,p)=>dispatch({type:"move",agentId,x:p.x,y:p.y})}/>
         <SpeechBubbles bubbles={bubbles} playerPosition={playerState.position} agents={activeScene?.kind==="street"?[]:state.agents} onOpen={openChatMessage}/>
       </div>
     </div>
@@ -121,10 +126,10 @@ function App() {
       <div className="office-drawer-head"><div><small>{panel==="elevator"?"BUILDING":"WORKSPACE"}</small><h2>{panel[0].toUpperCase()+panel.slice(1)}</h2></div><button type="button" onClick={()=>setPanel(null)} aria-label="Close panel">×</button></div>
       <div className="office-drawer-content">
         {panel==="chat"&&<ChatPanel agents={state.agents} messages={messages} onSend={sendChat} focusedMessageId={focusedMessageId} status={chatStatus} error={chatError}/>}
-        {panel==="agents"&&<OfficePanels state={{...state,tasks:[],events:[]}} selectedId={selectedAgent} onSelect={setSelectedAgent} onAssign={(taskId,agentId)=>dispatch({type:"assign",taskId,agentId})}/>}
-        {panel==="projects"&&<div className="office-panel-section"><h3>Projects & tasks</h3><p>Demo tasks in your office. Connect a project provider for live projects.</p>{state.tasks.map(task=><article className="office-project" key={task.id}><strong>{task.title}</strong><span>{task.status}</span>{task.status==="queued"&&<select aria-label={"Assign "+task.title} defaultValue="" onChange={e=>{if(e.target.value)dispatch({type:"assign",taskId:task.id,agentId:e.target.value});}}><option value="">Assign agent…</option>{state.agents.filter(a=>a.status==="idle"||a.status==="completed").map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>}</article>)}</div>}
+        {panel==="agents"&&<div className="office-panel-section"><h3>Agents</h3><div className="agent-roster">{state.agents.map(agent=><button key={agent.id} className={selectedAgent===agent.id?"selected":""} onClick={()=>setSelectedAgent(agent.id)}><strong>{agent.name}</strong><span>{agent.status}</span></button>)}</div>{activeWorkspaceId&&selectedAgentModel?.providerId&&selectedAgentModel.connectionId?<AgentInspector workspaceId={activeWorkspaceId} agent={selectedAgentModel} onMessage={body=>sendChat(body,[{kind:"agent",id:selectedAgentModel.providerId!,name:selectedAgentModel.name,text:`@${selectedAgentModel.name}`,start:0,end:selectedAgentModel.name.length+1,connectionId:selectedAgentModel.connectionId}])}/>:<p>Select a connected agent to inspect and interact with it.</p>}</div>}
+        {panel==="projects"&&activeWorkspaceId&&<ProjectPanel workspaceId={activeWorkspaceId}/>}
         {panel==="activity"&&<div className="office-panel-section"><h3>Office activity</h3><p>Simulation events are separate from chat.</p><ol className="office-activity">{state.events.map(event=><li key={event.id}><small>Tick {event.tick}</small><span>{event.message}</span></li>)}</ol></div>}
-        {panel==="settings"&&<div className="office-panel-section"><h3>Simulation</h3><div className="office-setting"><button onClick={()=>dispatch({type:"toggle"})}>{state.running?"Pause simulation":"Resume simulation"}</button><button onClick={()=>dispatch({type:"reset"})}>Reset simulation</button></div><label className="office-speed">Simulation speed <select value={state.speed} onChange={e=>dispatch({type:"speed",value:Number(e.target.value)})}><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select></label><LayoutEditor layout={layout} onChange={setLayout} onReset={()=>{resetLayout();setLayout(defaultLayout);}}/></div>}
+        {panel==="settings"&&<div className="office-panel-section">{activeWorkspaceId&&chatStatus!=="local"&&<ConnectionManager workspaceId={activeWorkspaceId}/>}<h3>Simulation</h3><div className="office-setting"><button onClick={()=>dispatch({type:"toggle"})}>{state.running?"Pause simulation":"Resume simulation"}</button><button onClick={()=>dispatch({type:"reset"})}>Reset simulation</button></div><label className="office-speed">Simulation speed <select value={state.speed} onChange={e=>dispatch({type:"speed",value:Number(e.target.value)})}><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select></label><LayoutEditor layout={layout} onChange={setLayout} onReset={()=>setLayout(defaultLayout)}/></div>}
         {panel==="elevator"&&<div className="office-panel-section"><h3>Select a destination</h3><p>Each numbered floor is a Forma workspace. Street level is the shared exterior.</p><div className="elevator-floors">{floorScenes.map(scene=><button key={scene.id} className={scene.id===activeScene?.id?"active":""} onClick={()=>selectFloor(scene.workspaceId!)}><strong>{scene.floor}</strong><span>{scene.name}</span></button>)}<button className={activeScene?.id===STREET_SCENE.id?"active":""} onClick={selectStreet}><strong>G</strong><span>Street & park</span></button></div></div>}
       </div>
     </div>}
