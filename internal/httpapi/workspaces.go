@@ -68,6 +68,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections", a.createConnection)
 	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections/{connectionID}/test", a.testConnection)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents", a.listAgents)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents/ws", a.streamAgents)
 }
 
 func (a *API) testConnection(w http.ResponseWriter, r *http.Request) {

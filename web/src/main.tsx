@@ -18,7 +18,7 @@ import "./elevator.css";
 import { LayoutEditor } from "./LayoutEditor";
 import { defaultLayout, loadLayout, resetLayout, saveLayout } from "./layout";
 import { ensureDefaultConversation,ensureWorkspaceConversation,listWorkspaces, listConversationMessages, sendConversationMessage, watchConversationMessages, type ConversationMessage, type ConversationScope,type Workspace } from "./conversationApi";
-import {listWorkspaceAgents} from "./agentApi";
+import {listWorkspaceAgents,watchWorkspaceAgents} from "./agentApi";
 import{DEMO_WORKSPACES,ELEVATOR_TILE,sceneSpawn,STREET_SCENE,streetBlockedTiles,workspaceScenes}from"./scenes";
 import{tileKey,worldToTile}from"./worldGrid";
 import{ConnectionManager}from"./ConnectionManager";
@@ -68,9 +68,9 @@ function App() {
   },[activeWorkspaceId,toChatMessage]);
   React.useEffect(()=>{
     if(!conversationScope)return;
-    const controller=new AbortController();
-    const refresh=()=>void listWorkspaceAgents(conversationScope.workspaceId,controller.signal).then(agents=>dispatch({type:"projectAgents",agents})).catch(()=>{});
-    refresh();const timer=window.setInterval(refresh,5000);return()=>{controller.abort();window.clearInterval(timer);};
+    const controller=new AbortController();let stop:undefined|(()=>void);
+    void listWorkspaceAgents(conversationScope.workspaceId,controller.signal).then(agents=>{dispatch({type:"projectAgents",agents});stop=watchWorkspaceAgents(conversationScope.workspaceId,updated=>dispatch({type:"projectAgents",agents:updated}),()=>setChatError("Live agent updates disconnected. Reopen the floor to reconnect."));}).catch(()=>{});
+    return()=>{controller.abort();stop?.();};
   },[conversationScope,dispatch]);
   React.useEffect(()=>{if(activeScene?.kind==="office"&&tileKey(worldToTile(playerState.position))===tileKey(ELEVATOR_TILE)&&!playerState.seated)setPanel("elevator");},[activeScene?.kind,playerState.position,playerState.seated]);
   const selectFloor=(workspaceId:string)=>{setActiveSceneId(`workspace:${workspaceId}`);setActiveWorkspaceId(workspaceId);setConversationScope(undefined);setSelectedAgent(undefined);setMessages([]);setBubbles([]);if(chatStatus!=="local"){dispatch({type:"projectAgents",agents:[]});setChatStatus("connecting");}setPanel(null);};
