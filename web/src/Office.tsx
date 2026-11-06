@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Application, Container, Graphics, Text } from "pixi.js";
 import { makeElevator,makeProjectBoard, makeWindows, makeWorkstations } from "./OfficeFixtures";
-import {createCharacterSprite,directionFromDelta,directionFromFacing,preloadCharacterSprites,type CharacterDirection,type CharacterKind,type CharacterSprite} from "./characterSprites";
+import {createCharacterSprite,directionFromDelta,directionFromFacing,preloadCharacterSprites,type CharacterDirection,type CharacterSprite} from "./characterSprites";
 import type {PlayerState} from "./playerMovement";
 import{snapToGrid}from"./worldGrid";
 import{makeStreetScene}from"./StreetScene";
@@ -18,9 +18,9 @@ export function walkToward(current: Position, target: Position, distance: number
  return { x: current.x + dx * distance / length, y: current.y + dy * distance / length };
 }
 export type OfficeAgent = { id: string; name: string; status: string; position: Position; color?: number; pose?:"stand"|"sit"|"work" };
-export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState;playerKind?:Extract<CharacterKind,"player-tech"|"player-inventor">;sceneKind?:"office"|"street"; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void;onOpenElevator?:()=>void;onEnterBuilding?:()=>void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
+export type OfficeProps = { agents?: OfficeAgent[]; playerState:PlayerState;sceneKind?:"office"|"street"; onSelect?: (id: string) => void; onDeselect?: () => void; onOpenProjects?: () => void;onOpenElevator?:()=>void;onEnterBuilding?:()=>void; onMove?: (id: string, position: Position) => void; selectedId?: string; deskPositions?: Position[] };
 const fallback: OfficeAgent[] = [{ id: "demo-agent", name: "Demo Agent", status: "idle", position: { x: 430, y: 355 } }];
-export function Office({ agents = fallback, playerState,playerKind="player-tech",sceneKind="office", onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions = desks }: OfficeProps) {
+export function Office({ agents = fallback, playerState,sceneKind="office", onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions = desks }: OfficeProps) {
  const host = useRef<HTMLDivElement>(null);
  const live = useRef({ agents, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions });
  live.current = { agents, playerState, onSelect, onDeselect, onOpenProjects,onOpenElevator,onEnterBuilding, onMove, selectedId, deskPositions };
@@ -67,7 +67,7 @@ export function Office({ agents = fallback, playerState,playerKind="player-tech"
    app.stage.on("pointerupoutside", finishDrag);
    await preloadCharacterSprites();
    const world=new Container();world.sortableChildren=true;app.stage.addChild(world);
-   const playerCharacter=createCharacterSprite(playerKind);const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);world.addChild(playerNode);let renderedPlayer={...live.current.playerState.position};
+   const playerCharacter=createCharacterSprite("player");const playerNode=new Container();playerNode.addChild(playerCharacter.sprite);world.addChild(playerNode);let renderedPlayer={...live.current.playerState.position};
    let deskKey = "";
    let furniture:Container[]=[];const drawFurniture = (positions: Position[]) => { furniture.forEach(child=>{world.removeChild(child);child.destroy({children:true});});furniture=makeWorkstations(positions);world.addChild(...furniture); };
    if(sceneKind==="office")drawFurniture(live.current.deskPositions);
@@ -77,7 +77,7 @@ export function Office({ agents = fallback, playerState,playerKind="player-tech"
     for (const a of incoming) {
      let actor = actors.get(a.id);
      if (!actor) {
-      const node = new Container(),character=createCharacterSprite(),indicator=new Graphics(),indicatorText=new Text({text:"",style:{fontFamily:"sans-serif",fontSize:15,fontWeight:"bold",fill:0xffffff}});indicator.circle(0,0,15).fill(0x59677b).stroke({color:0xffffff,width:2});indicator.position.set(0,-88);indicatorText.anchor.set(.5);indicatorText.position.set(0,-89);node.addChild(character.sprite,indicator,indicatorText);
+      const node = new Container(),character=createCharacterSprite(),indicator=new Graphics(),indicatorText=new Text({text:"",style:{fontFamily:"sans-serif",fontSize:15,fontWeight:"bold",fill:0xffffff}});indicator.circle(0,0,15).fill(0x59677b).stroke({color:0xffffff,width:2});indicator.position.set(0,-48);indicatorText.anchor.set(.5);indicatorText.position.set(0,-49);node.addChild(character.sprite,indicator,indicatorText);
       node.eventMode = "static"; node.cursor = "pointer";
       node.on("pointerdown", e => {
        e.stopPropagation();
@@ -95,7 +95,7 @@ export function Office({ agents = fallback, playerState,playerKind="player-tech"
      const before={...actor.position};actor.position = drag?.id === a.id && drag.moved ? actor.target : walkToward(actor.position, actor.target, Math.min(12, 2.5 * ticker.deltaTime));
      const dx=actor.position.x-before.x,dy=actor.position.y-before.y,moving=Math.hypot(dx,dy)>.01;if(moving)actor.direction=directionFromDelta(dx,dy,actor.direction);
      actor.node.position.set(actor.position.x, actor.position.y);
-     actor.label.position.set(actor.position.x, actor.position.y + 47);
+     actor.label.position.set(actor.position.x, actor.position.y + 34);
      actor.label.text = a.name + " · " + a.status;
      actor.node.alpha = live.current.selectedId === a.id ? 1 : 0.96;actor.node.zIndex=actor.position.y-(a.pose==="sit"||a.pose==="work"?50:0);
      actor.character.setPose(moving?"walk":a.pose==="work"?"work":a.pose==="sit"?"sit":"idle",actor.direction,app.ticker.lastTime/1000);
@@ -108,6 +108,6 @@ export function Office({ agents = fallback, playerState,playerKind="player-tech"
   };
   void init();
   return () => { disposed = true; observerCleanup?.(); if (app.renderer) app.destroy(true); };
- }, [sceneKind,playerKind]);
+ }, [sceneKind]);
  return <div ref={host} className="office-canvas" aria-label={sceneKind==="street"?"Interactive illustrated street. Use the keyboard to explore and enter the office building.":"Interactive illustrated office. Select an agent and use the keyboard to move."} />;
 }

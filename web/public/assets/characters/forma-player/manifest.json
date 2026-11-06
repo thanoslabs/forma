@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "image": "atlas.png",
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "columns": [0, 1, 2, 3],
+  "rows": ["idle", "walk"],
+  "framesPerSecond": 10,
+  "groundAnchor": { "x": 0.5, "y": 0.82 },
+  "source": "https://github.com/j6nca/schmove/tree/main/project/assets/sprites"
+}
