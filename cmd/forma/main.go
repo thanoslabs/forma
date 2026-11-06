@@ -71,7 +71,8 @@ func main() {
 	})
 	router := turns.NewRouter(store, store, registry, live)
 	agentReader := projections.NewAgentReader(store, registry)
-	httpapi.New(store, store, live, router).WithAgentProjections(agentReader).WithConnectionTester(agentReader).WithAgentDetails(agentReader).Register(mux)
+	projectReader := projections.NewProjectReader(store)
+	httpapi.New(store, store, live, router).WithAgentProjections(agentReader).WithConnectionTester(agentReader).WithAgentDetails(agentReader).WithProjectProjections(projectReader).WithWorlds(store).Register(mux)
 	if settings.EnableDemoAPI {
 		httpapi.NewMockAPI().Register(mux)
 	}
