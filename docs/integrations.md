@@ -15,6 +15,8 @@ Chat ingestion verifies provider signatures before accepting an event, stores a 
 ## Overwatch first
 Overwatch already exposes /api/v1, /openapi.yaml, scoped bearer tokens, and MCP at /mcp. Its documented agent workflow supports claim-next, heartbeat, update-task, and release-task. Overwatch owns work claims, 15-minute default leases and retry policies; Forma must not create competing leases. Use the REST API for strongly typed integration initially, reserving MCP as an optional transport. Validate precise endpoints and response schemas against Overwatch's OpenAPI before implementation.
 
+Forma's initial read integration uses the documented `GET /api/v1/repositories` and `GET /api/v1/issues?repository_id=…` operations. Add an Overwatch project connection in workspace settings with its server root and a scoped bearer token; repositories and issues then appear in the Projects panel. Claim and lease mutations remain an explicit follow-up so Overwatch stays authoritative for ownership and retries.
+
 ## Harnesses
 Paseo is the first target harness. Forma connects directly to the Paseo daemon's version 1 WebSocket protocol, authenticates with the protocol `hello`, discovers agents with `fetch_agents_request`, and sends prompts with `send_agent_message_request`. The Forma command idempotency key is passed as Paseo's client-provided `messageId`.
 
