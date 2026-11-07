@@ -39,6 +39,10 @@ type ProjectProjectionReader interface {
 	ListWorkItems(context.Context, string, string, string) ([]projects.WorkItem, error)
 }
 
+type ExecutionProjectionReader interface {
+	ListExecutions(context.Context, string) ([]projections.Execution, error)
+}
+
 type API struct {
 	workspaces       workspaces.Repository
 	conversations    conversations.Repository
@@ -48,6 +52,7 @@ type API struct {
 	connectionTester ConnectionTester
 	agentDetails     AgentDetailReader
 	projects         ProjectProjectionReader
+	executions       ExecutionProjectionReader
 	worlds           worlds.Repository
 }
 
@@ -84,6 +89,11 @@ func (a *API) WithProjectProjections(reader ProjectProjectionReader) *API {
 	return a
 }
 
+func (a *API) WithExecutionProjections(reader ExecutionProjectionReader) *API {
+	a.executions = reader
+	return a
+}
+
 func (a *API) WithWorlds(repository worlds.Repository) *API {
 	a.worlds = repository
 	return a
@@ -100,9 +110,23 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/agents/ws", a.streamAgents)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/agents/{agentID}", a.getAgent)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/projects", a.listProjects)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/executions", a.listExecutions)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/projects/{projectID}/items", a.listWorkItems)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/world", a.getWorld)
 	mux.HandleFunc("PUT /api/v1/workspaces/{workspaceID}/world", a.putWorld)
+}
+
+func (a *API) listExecutions(w http.ResponseWriter, r *http.Request) {
+	if a.executions == nil {
+		http.Error(w, "execution projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	items, err := a.executions.ListExecutions(r.Context(), r.PathValue("workspaceID"))
+	if err != nil {
+		http.Error(w, "unable to load executions", http.StatusBadGateway)
+		return
+	}
+	respond(w, items)
 }
 
 func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
@@ -276,7 +300,7 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, destination any) bool {
 }
 
 func validProviderType(value string) bool {
-	return value == "agent" || value == "project" || value == "chat"
+	return value == "agent" || value == "project" || value == "chat" || value == "orchestration"
 }
 
 func newID() string {
