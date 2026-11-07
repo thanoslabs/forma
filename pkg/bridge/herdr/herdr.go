@@ -123,6 +123,28 @@ func (p *Provider) Observe(ctx context.Context, parent orchestration.RuntimeRef)
 	return bridge.RuntimeObservation{State: mapState(root), Parent: orchestration.RuntimeRef{ConnectionID: p.connectionID, MachineID: p.machine, TerminalID: root.Address}, Helpers: helpers}, nil
 }
 
+func (p *Provider) Recover(ctx context.Context, executionID string) (orchestration.RuntimeRef, error) {
+	list, err := p.runner.Run(ctx, p.binary, "--json", "ls")
+	if err != nil {
+		return orchestration.RuntimeRef{}, fmt.Errorf("list herdr terminals: %w", err)
+	}
+	var response struct {
+		Terminals []struct {
+			Address string `json:"address"`
+			Name    string `json:"name"`
+		} `json:"terminals"`
+	}
+	if err := json.Unmarshal(list, &response); err != nil {
+		return orchestration.RuntimeRef{}, fmt.Errorf("decode hc ls: %w", err)
+	}
+	for _, item := range response.Terminals {
+		if item.Name == executionID {
+			return orchestration.RuntimeRef{ConnectionID: p.connectionID, MachineID: p.machine, TerminalID: item.Address}, nil
+		}
+	}
+	return orchestration.RuntimeRef{}, bridge.ErrRuntimeNotFound
+}
+
 func mapState(value terminal) orchestration.State {
 	if value.State != "live" {
 		return orchestration.StateReview
