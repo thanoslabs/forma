@@ -110,6 +110,28 @@ func (p *Provider) Release(ctx context.Context, _ orchestration.WorkRef, claim o
 	return err
 }
 
+func (p *Provider) Report(ctx context.Context, _ orchestration.WorkRef, claim orchestration.ClaimRef, update bridge.WorkUpdate) error {
+	status := string(update.State)
+	if update.State == orchestration.StateRunning {
+		status = "in_progress"
+	}
+	if update.State == orchestration.StateReview {
+		status = "needs_review"
+	}
+	if status != "in_progress" && status != "blocked" && status != "needs_review" && status != "failed" && status != "completed" {
+		return fmt.Errorf("execution state %s cannot be reported to Overwatch", update.State)
+	}
+	body := map[string]any{"status": status, "message": update.Message}
+	if update.Progress > 0 {
+		body["progress"] = update.Progress
+	}
+	if update.ResultURL != "" {
+		body["result_url"] = update.ResultURL
+	}
+	_, err := p.request(ctx, http.MethodPatch, "/agent-tasks/"+url.PathEscape(claim.ID), body, &agentTask{})
+	return err
+}
+
 func (p *Provider) claimRef(task agentTask) (orchestration.ClaimRef, error) {
 	if strings.TrimSpace(task.ID) == "" {
 		return orchestration.ClaimRef{}, errors.New("Overwatch returned a task without an ID")
