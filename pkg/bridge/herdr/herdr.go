@@ -84,3 +84,57 @@ func (p *Provider) Start(ctx context.Context, request bridge.RuntimeStart) (orch
 	}
 	return orchestration.RuntimeRef{ConnectionID: p.connectionID, MachineID: p.machine, TerminalID: response.Address}, nil
 }
+
+type terminal struct {
+	Address string `json:"address"`
+	Parent  string `json:"parent"`
+	State   string `json:"state"`
+	Status  string `json:"status"`
+}
+
+func (p *Provider) Observe(ctx context.Context, parent orchestration.RuntimeRef) (bridge.RuntimeObservation, error) {
+	output, err := p.runner.Run(ctx, p.binary, "--json", "get", parent.TerminalID)
+	if err != nil {
+		return bridge.RuntimeObservation{}, fmt.Errorf("inspect herdr terminal: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	var root terminal
+	if err := json.Unmarshal(output, &root); err != nil {
+		return bridge.RuntimeObservation{}, fmt.Errorf("decode hc get: %w", err)
+	}
+	if root.Address == "" {
+		root.Address = parent.TerminalID
+	}
+	list, err := p.runner.Run(ctx, p.binary, "--json", "ls")
+	if err != nil {
+		return bridge.RuntimeObservation{}, fmt.Errorf("list herdr terminals: %w", err)
+	}
+	var response struct {
+		Terminals []terminal `json:"terminals"`
+	}
+	if err := json.Unmarshal(list, &response); err != nil {
+		return bridge.RuntimeObservation{}, fmt.Errorf("decode hc ls: %w", err)
+	}
+	helpers := make([]orchestration.RuntimeRef, 0)
+	for _, item := range response.Terminals {
+		if item.Parent == root.Address {
+			helpers = append(helpers, orchestration.RuntimeRef{ConnectionID: p.connectionID, TerminalID: item.Address})
+		}
+	}
+	return bridge.RuntimeObservation{State: mapState(root), Parent: orchestration.RuntimeRef{ConnectionID: p.connectionID, MachineID: p.machine, TerminalID: root.Address}, Helpers: helpers}, nil
+}
+
+func mapState(value terminal) orchestration.State {
+	if value.State != "live" {
+		return orchestration.StateReview
+	}
+	switch value.Status {
+	case "blocked":
+		return orchestration.StateBlocked
+	case "error":
+		return orchestration.StateFailed
+	case "done":
+		return orchestration.StateReview
+	default:
+		return orchestration.StateRunning
+	}
+}

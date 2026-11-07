@@ -20,6 +20,9 @@ func (f *fakeCoordinator) Heartbeat(context.Context, string) (orchestration.Exec
 	f.hearts++
 	return orchestration.Execution{}, nil
 }
+func (f *fakeCoordinator) ReconcileRuntime(context.Context, string) (orchestration.Execution, error) {
+	return orchestration.Execution{}, nil
+}
 
 type fakeActiveStore struct{ items []orchestration.Execution }
 

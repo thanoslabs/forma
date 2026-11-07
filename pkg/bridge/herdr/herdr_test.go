@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/thanoslabs/forma/pkg/bridge"
+	"github.com/thanoslabs/forma/pkg/orchestration"
 )
 
 type fakeRunner struct {
@@ -14,6 +15,25 @@ type fakeRunner struct {
 	args   []string
 	output []byte
 	err    error
+}
+
+type sequenceRunner struct {
+	outputs [][]byte
+	calls   int
+}
+
+func (r *sequenceRunner) Run(context.Context, string, ...string) ([]byte, error) {
+	out := r.outputs[r.calls]
+	r.calls++
+	return out, nil
+}
+func TestProviderObservesParentAndHelpers(t *testing.T) {
+	runner := &sequenceRunner{outputs: [][]byte{[]byte(`{"address":"t1","state":"live","status":"blocked"}`), []byte(`{"terminals":[{"address":"t1"},{"address":"t2","parent":"t1"}]}`)}}
+	provider, _ := New(Config{ConnectionID: "herdr", Command: []string{"codex"}, Runner: runner})
+	observation, err := provider.Observe(context.Background(), orchestration.RuntimeRef{ConnectionID: "herdr", TerminalID: "t1"})
+	if err != nil || observation.State != orchestration.StateBlocked || len(observation.Helpers) != 1 || observation.Helpers[0].TerminalID != "t2" {
+		t.Fatalf("observation=%#v err=%v", observation, err)
+	}
 }
 
 func (r *fakeRunner) Run(_ context.Context, name string, args ...string) ([]byte, error) {

@@ -35,6 +35,15 @@ type RuntimeProvider interface {
 	Start(context.Context, RuntimeStart) (orchestration.RuntimeRef, error)
 }
 
+type RuntimeObservation struct {
+	State   orchestration.State
+	Parent  orchestration.RuntimeRef
+	Helpers []orchestration.RuntimeRef
+}
+type RuntimeObserver interface {
+	Observe(context.Context, orchestration.RuntimeRef) (RuntimeObservation, error)
+}
+
 type Store interface {
 	Create(context.Context, orchestration.Execution) error
 	Get(context.Context, string) (orchestration.Execution, error)
@@ -115,6 +124,29 @@ func (c *Coordinator) Heartbeat(ctx context.Context, executionID string) (orches
 	}
 	execution.Claim = &claim
 	execution.UpdatedAt = c.now()
+	if err := c.store.Update(ctx, execution); err != nil {
+		return execution, err
+	}
+	return execution, nil
+}
+
+func (c *Coordinator) ReconcileRuntime(ctx context.Context, executionID string) (orchestration.Execution, error) {
+	execution, err := c.store.Get(ctx, executionID)
+	if err != nil {
+		return orchestration.Execution{}, err
+	}
+	observer, ok := c.runtime.(RuntimeObserver)
+	if !ok || execution.Parent == nil {
+		return execution, errors.New("runtime observation is unavailable")
+	}
+	observation, err := observer.Observe(ctx, *execution.Parent)
+	if err != nil {
+		return execution, err
+	}
+	execution.Parent, execution.Helpers, execution.State, execution.UpdatedAt = &observation.Parent, observation.Helpers, observation.State, c.now()
+	if err := execution.Validate(); err != nil {
+		return execution, err
+	}
 	if err := c.store.Update(ctx, execution); err != nil {
 		return execution, err
 	}
