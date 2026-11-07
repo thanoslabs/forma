@@ -20,6 +20,7 @@ Forma is a self-hostable, browser-based visual control plane for agents and proj
 | Connection configuration, local workspace, conversations, visual layout, execution correlation, event history | Forma |
 | Native channel, thread, user and message identity | Chat provider |
 | Work-item claim and lease when using Overwatch | Overwatch |
+| Terminal process, parent/helper hierarchy, runtime status and output when using Herdr | Herdr |
 
 Forma may cache external resources as projections with provider IDs, sync timestamps and staleness markers. Disconnection must not imply idle state.
 
@@ -35,7 +36,9 @@ Conversation WebSockets replay the persisted message timeline before emitting in
 
 Persisted message writes require an `Idempotency-Key`. An agent mention is dispatchable only when it includes both the provider agent ID and its Forma connection ID; a display-name mention alone is inert. Forma records an `agent_turn` and `agent_command` before invoking an input-capable adapter, then persists the correlated reply or failure. Replaying the same message key returns the original message without invoking the adapter again.
 
-The workspace agent roster is a live, connection-scoped projection from configured agent adapters. Provider IDs are always paired with a connection ID, and the browser periodically refreshes this projection. When no agent connection is configured, the local office simulation remains available as a deliberate demo fallback.
+The workspace agent roster is a live, connection-scoped projection from configured agent adapters. Provider IDs are always paired with a connection ID, and the browser receives changed snapshots over a workspace WebSocket. When no agent connection is configured, the local office simulation remains available as a deliberate demo fallback.
+
+Herdr fits behind the agent harness boundary. Herdr owns terminals, processes, machines, native agent sessions, reported lifecycle state, and parent/helper relationships. Forma may visualize and authorize actions against those resources but must not duplicate their lifecycle. A local outbound connector narrows Herdr's powerful local control API into typed, capability-gated observations and commands; the Forma server never receives an unrestricted Herdr socket or general-purpose shell.
 
 World movement uses a logical tile grid independent of viewport scaling. Players move between adjacent walkable cells, autonomous actors use deterministic A* paths, and furniture contributes blocked and interaction cells. Pixi interpolates between committed tile positions so navigation remains visually smooth without introducing free-coordinate drift.
 
