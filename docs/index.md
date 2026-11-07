@@ -8,6 +8,7 @@ Forma is a self-hostable virtual office where people can observe, organize, and 
 - [[integrations]] defines agent, project, and chat provider contracts.
 - [[conversations]] defines canonical messages, agent turns, and external delivery.
 - [[roadmap]] tracks the path from the current demo to a multi-user deployment.
+- [[orchestration]] defines the independent Overwatch–Herdr execution system beneath Forma.
 - [[development]] explains how to run the service and web client locally.
 - [[interactive-demo]] documents the browser-based office prototype.
 - [[world-scenes]] documents floors, elevators, street-level navigation, and visual assets.
