@@ -20,8 +20,12 @@ Forma is a self-hostable, browser-based visual control plane for agents and proj
 | Connection configuration, local workspace, conversations, visual layout, execution correlation, event history | Forma |
 | Native channel, thread, user and message identity | Chat provider |
 | Work-item claim and lease when using Overwatch | Overwatch |
+| Cross-system execution loop and recovery | Standalone Overwatch–Herdr bridge |
+| Terminal processes, parent/helper hierarchy and runtime state when using Herdr | Herdr |
 
 Forma may cache external resources as projections with provider IDs, sync timestamps and staleness markers. Disconnection must not imply idle state.
+
+Forma is not required for execution. The standalone bridge coordinates Overwatch and Herdr, records durable correlation and publishes observations. Forma reads that state and sends typed, authorized intent back to the authoritative system. See [[orchestration]].
 
 ## Domain model
 Workspace contains Connections, Rooms and Conversations. A Connection identifies a provider and stores server-side credentials. AgentRef = (connection_id, provider_agent_id); SessionRef = (connection_id, provider_session_id). WorkItemRef = (connection_id, provider_item_id). ChatMessageRef = (connection_id, provider_message_id). Execution records correlate one or more sessions to a work item or agent turn, with explicit attempt numbers and idempotency keys. Events are append-only and carry source, provider event ID, observed timestamp, received timestamp, schema version, and correlation IDs. Avatar and room placement belong to Forma and do not mutate provider state.
