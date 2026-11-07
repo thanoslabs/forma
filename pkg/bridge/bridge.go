@@ -25,6 +25,16 @@ type WorkProvider interface {
 	Release(context.Context, orchestration.WorkRef, orchestration.ClaimRef, string) error
 }
 
+type WorkUpdate struct {
+	State     orchestration.State
+	Message   string
+	Progress  int
+	ResultURL string
+}
+type WorkReporter interface {
+	Report(context.Context, orchestration.WorkRef, orchestration.ClaimRef, WorkUpdate) error
+}
+
 type RuntimeStart struct {
 	ExecutionID string
 	Prompt      string
@@ -144,6 +154,14 @@ func (c *Coordinator) ReconcileRuntime(ctx context.Context, executionID string) 
 		return execution, err
 	}
 	execution.Parent, execution.Helpers, execution.State, execution.UpdatedAt = &observation.Parent, observation.Helpers, observation.State, c.now()
+	if execution.Claim != nil && execution.ReportedState != execution.State {
+		if reporter, ok := c.work.(WorkReporter); ok {
+			if err := reporter.Report(ctx, execution.Work, *execution.Claim, WorkUpdate{State: execution.State, Message: "Herdr runtime is " + string(execution.State)}); err != nil {
+				return execution, err
+			}
+			execution.ReportedState = execution.State
+		}
+	}
 	if err := execution.Validate(); err != nil {
 		return execution, err
 	}

@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/thanoslabs/forma/pkg/bridge"
+	"github.com/thanoslabs/forma/pkg/orchestration"
 )
 
 func TestProviderClaimHeartbeatAndRelease(t *testing.T) {
 	expires := time.Now().UTC().Add(15 * time.Minute).Format(time.RFC3339Nano)
-	requests := make([]string, 0, 3)
+	requests := make([]string, 0, 4)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests = append(requests, r.URL.Path)
 		if r.Header.Get("Authorization") != "Bearer secret" {
@@ -43,7 +44,10 @@ func TestProviderClaimHeartbeatAndRelease(t *testing.T) {
 	if err := provider.Release(context.Background(), claimed.Work, claimed.Claim, "test"); err != nil {
 		t.Fatal(err)
 	}
-	if len(requests) != 3 || requests[1] != "/api/v1/agent-tasks/task-1/heartbeat" || requests[2] != "/api/v1/agent-tasks/task-1/release" {
+	if err := provider.Report(context.Background(), claimed.Work, claimed.Claim, bridge.WorkUpdate{State: orchestration.StateReview, Message: "ready", ResultURL: "https://example/pr/2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 4 || requests[1] != "/api/v1/agent-tasks/task-1/heartbeat" || requests[2] != "/api/v1/agent-tasks/task-1/release" || requests[3] != "/api/v1/agent-tasks/task-1" {
 		t.Fatalf("requests: %v", requests)
 	}
 }
