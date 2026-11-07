@@ -1,4 +1,4 @@
-export type Connection={id:string;workspaceId:string;adapterId:string;providerType:"agent"|"project"|"chat";displayName:string;endpointUrl?:string;createdAt:string};
+export type Connection={id:string;workspaceId:string;adapterId:string;providerType:"agent"|"project"|"chat"|"orchestration";displayName:string;endpointUrl?:string;createdAt:string};
 export type ConnectionCheck={connectionId:string;status:"connected";agentCount:number;capabilities:string[];checkedAt:string};
 export type CreateConnection={adapterId:string;providerType:Connection["providerType"];displayName:string;endpointUrl:string;credential:string};
 
