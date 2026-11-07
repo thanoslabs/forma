@@ -77,6 +77,9 @@ func (e Execution) Validate() error {
 	if blank(e.Work.ConnectionID) || blank(e.Work.ProjectID) || blank(e.Work.ItemID) {
 		validationErrors = append(validationErrors, errors.New("work connection, project and item IDs are required"))
 	}
+	if e.Claim != nil && blank(e.Claim.ID) {
+		validationErrors = append(validationErrors, errors.New("claim ID is required"))
+	}
 	if e.Parent != nil && (blank(e.Parent.ConnectionID) || blank(e.Parent.TerminalID)) {
 		validationErrors = append(validationErrors, errors.New("parent connection and terminal IDs are required"))
 	}
