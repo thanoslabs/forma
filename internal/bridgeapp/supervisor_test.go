@@ -23,6 +23,9 @@ func (f *fakeCoordinator) Heartbeat(context.Context, string) (orchestration.Exec
 func (f *fakeCoordinator) ReconcileRuntime(context.Context, string) (orchestration.Execution, error) {
 	return orchestration.Execution{}, nil
 }
+func (f *fakeCoordinator) Recover(context.Context, string) (orchestration.Execution, error) {
+	return orchestration.Execution{}, nil
+}
 
 type fakeActiveStore struct{ items []orchestration.Execution }
 

@@ -49,6 +49,27 @@ type agentTask struct {
 	Title          string `json:"title"`
 	URL            string `json:"url"`
 	LeaseExpiresAt string `json:"lease_expires_at"`
+	Status         string `json:"status"`
+}
+
+func (p *Provider) Inspect(ctx context.Context, _ orchestration.WorkRef, claim orchestration.ClaimRef) (bridge.WorkStatus, error) {
+	var task agentTask
+	_, err := p.request(ctx, http.MethodGet, "/agent-tasks/"+url.PathEscape(claim.ID), nil, &task)
+	if err != nil {
+		return bridge.WorkStatus{}, err
+	}
+	state := orchestration.State(task.Status)
+	if task.Status == "in_progress" {
+		state = orchestration.StateRunning
+	}
+	if task.Status == "needs_review" {
+		state = orchestration.StateReview
+	}
+	if task.Status == "expired" {
+		state = orchestration.StateReleased
+	}
+	active := task.Status == "claimed" || task.Status == "in_progress" || task.Status == "blocked" || task.Status == "needs_review"
+	return bridge.WorkStatus{Active: active, State: state}, nil
 }
 
 func New(config Config) (*Provider, error) {

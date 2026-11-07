@@ -14,6 +14,7 @@ type Coordinator interface {
 	StartNext(context.Context) (orchestration.Execution, error)
 	Heartbeat(context.Context, string) (orchestration.Execution, error)
 	ReconcileRuntime(context.Context, string) (orchestration.Execution, error)
+	Recover(context.Context, string) (orchestration.Execution, error)
 }
 type ActiveStore interface {
 	ListActive(context.Context) ([]orchestration.Execution, error)
@@ -35,6 +36,9 @@ func (s *Supervisor) Run(ctx context.Context) error {
 	defer poll.Stop()
 	heart := time.NewTicker(s.heartbeat)
 	defer heart.Stop()
+	if err := s.recoverOnce(ctx); err != nil {
+		s.log.Error("startup recovery failed", "error", err)
+	}
 	if err := s.pollOnce(ctx); err != nil {
 		s.log.Error("initial claim poll failed", "error", err)
 	}
@@ -52,6 +56,20 @@ func (s *Supervisor) Run(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (s *Supervisor) recoverOnce(ctx context.Context) error {
+	active, err := s.store.ListActive(ctx)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, execution := range active {
+		if _, err := s.coordinator.Recover(ctx, execution.ID); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 func (s *Supervisor) pollOnce(ctx context.Context) error {
 	active, err := s.store.ListActive(ctx)

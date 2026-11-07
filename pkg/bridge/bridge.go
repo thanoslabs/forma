@@ -12,6 +12,7 @@ import (
 )
 
 var ErrNoWork = errors.New("no eligible work")
+var ErrRuntimeNotFound = errors.New("runtime not found")
 
 type ClaimedWork struct {
 	Work   orchestration.WorkRef
@@ -34,6 +35,13 @@ type WorkUpdate struct {
 type WorkReporter interface {
 	Report(context.Context, orchestration.WorkRef, orchestration.ClaimRef, WorkUpdate) error
 }
+type WorkStatus struct {
+	Active bool
+	State  orchestration.State
+}
+type WorkInspector interface {
+	Inspect(context.Context, orchestration.WorkRef, orchestration.ClaimRef) (WorkStatus, error)
+}
 
 type RuntimeStart struct {
 	ExecutionID string
@@ -52,6 +60,9 @@ type RuntimeObservation struct {
 }
 type RuntimeObserver interface {
 	Observe(context.Context, orchestration.RuntimeRef) (RuntimeObservation, error)
+}
+type RuntimeRecoverer interface {
+	Recover(context.Context, string) (orchestration.RuntimeRef, error)
 }
 
 type Store interface {
@@ -86,7 +97,7 @@ func (c *Coordinator) StartNext(ctx context.Context) (orchestration.Execution, e
 		return orchestration.Execution{}, err
 	}
 	now := c.now()
-	execution := orchestration.Execution{SchemaVersion: orchestration.SchemaVersion, ID: id, Attempt: 1, State: orchestration.StateClaimed, Work: claimed.Work, Claim: &claimed.Claim, Helpers: []orchestration.RuntimeRef{}, Results: []orchestration.ResultLink{}, CreatedAt: now, UpdatedAt: now}
+	execution := orchestration.Execution{SchemaVersion: orchestration.SchemaVersion, ID: id, Attempt: 1, State: orchestration.StateClaimed, Work: claimed.Work, Prompt: claimed.Prompt, Claim: &claimed.Claim, Helpers: []orchestration.RuntimeRef{}, Results: []orchestration.ResultLink{}, CreatedAt: now, UpdatedAt: now}
 	if err := execution.Validate(); err != nil {
 		_ = c.work.Release(ctx, claimed.Work, claimed.Claim, "invalid execution: "+err.Error())
 		return orchestration.Execution{}, fmt.Errorf("validate claimed execution: %w", err)
@@ -118,6 +129,51 @@ func (c *Coordinator) StartNext(ctx context.Context) (orchestration.Execution, e
 		return execution, fmt.Errorf("persist running execution: %w", err)
 	}
 	return execution, nil
+}
+
+func (c *Coordinator) Recover(ctx context.Context, executionID string) (orchestration.Execution, error) {
+	execution, err := c.store.Get(ctx, executionID)
+	if err != nil {
+		return orchestration.Execution{}, err
+	}
+	if execution.Terminal() {
+		return execution, nil
+	}
+	if execution.Claim == nil {
+		return execution, errors.New("execution has no claim")
+	}
+	if inspector, ok := c.work.(WorkInspector); ok {
+		status, err := inspector.Inspect(ctx, execution.Work, *execution.Claim)
+		if err != nil {
+			return execution, err
+		}
+		if !status.Active {
+			execution.State = status.State
+			execution.UpdatedAt = c.now()
+			return execution, c.store.Update(ctx, execution)
+		}
+	}
+	if execution.Parent != nil {
+		return c.ReconcileRuntime(ctx, executionID)
+	}
+	recoverer, ok := c.runtime.(RuntimeRecoverer)
+	if !ok {
+		return execution, errors.New("runtime recovery is unavailable")
+	}
+	parent, err := recoverer.Recover(ctx, execution.ID)
+	if errors.Is(err, ErrRuntimeNotFound) {
+		parent, err = c.runtime.Start(ctx, RuntimeStart{ExecutionID: execution.ID, Prompt: execution.Prompt, Work: execution.Work})
+	}
+	if err != nil {
+		return execution, err
+	}
+	execution.Parent = &parent
+	execution.State = orchestration.StateRunning
+	execution.UpdatedAt = c.now()
+	if err := execution.Validate(); err != nil {
+		return execution, err
+	}
+	return execution, c.store.Update(ctx, execution)
 }
 
 func (c *Coordinator) Heartbeat(ctx context.Context, executionID string) (orchestration.Execution, error) {

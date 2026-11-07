@@ -53,6 +53,7 @@ type Execution struct {
 	State         State        `json:"state"`
 	ReportedState State        `json:"reportedState,omitempty"`
 	Work          WorkRef      `json:"work"`
+	Prompt        string       `json:"prompt,omitempty"`
 	Claim         *ClaimRef    `json:"claim,omitempty"`
 	Parent        *RuntimeRef  `json:"parent,omitempty"`
 	Helpers       []RuntimeRef `json:"helpers"`
