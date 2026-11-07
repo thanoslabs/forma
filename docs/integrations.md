@@ -26,6 +26,23 @@ The workspace Settings panel provides this onboarding flow. **Test & discover** 
 
 Paseo prompt acceptance is asynchronous. Forma marks the command and turn accepted after Paseo acknowledges it; it does not fabricate an agent reply. A later projection/event layer will correlate completed Paseo turns back into the conversation timeline. The deterministic mock harness remains available for synchronous UI and adapter conformance tests.
 
+## Herdr runtime fleet
+
+Herdr is an agent runtime, not a project tracker or visual workspace. Herdr remains authoritative for terminals, processes, parent/helper relationships, machines, working directories, runtime state, and terminal input/output. Forma projects that runtime into shared rooms and owns only spatial placement, conversations, authorization policy, event history, and correlations to external work.
+
+Target `herdr-core` for the long-term adapter. Its OpenRPC-described API and event stream provide terminal discovery, lifecycle status, helper relationships, remote machines, input steering, and output reads. The older Herdr TUI uses a separate runtime and local socket; if supported, it must be represented as a distinct connection rather than merged implicitly with herdr-core.
+
+Because Herdr's control API is local and permits powerful terminal operations, a hosted Forma service must not receive direct access to its socket. A small local connector should establish an authenticated outbound session to Forma and expose a narrow, capability-negotiated contract:
+
+- observe terminals, agents, hierarchy, status, machine, and working directory;
+- subscribe to lifecycle and hierarchy events with reconnect reconciliation;
+- optionally read bounded, sanitized output;
+- optionally start, steer, wait for, attach to, or stop agents under explicit authorization.
+
+Top-level Herdr agents map to persistent office occupants. Helper agents map to temporary members of the parent's team or pod and retain stable provider IDs even if their visual placement changes. Runtime `done` means the terminal session settled; it does not complete an Overwatch work item automatically.
+
+Forma execution records correlate an Overwatch `WorkItemRef` with a Herdr parent `SessionRef`, zero or more helper session references, attempt number, timestamps, and result links. Overwatch continues to own claims, leases, retries, and workflow state; Herdr continues to own process execution.
+
 ## Failure behavior
 If a provider is offline, show last-observed state with a stale/unknown indicator. Queue no mutation by default while disconnected. Write operations need idempotency and reconciliation after uncertain responses. Correlate tasks to executions without overwriting native provider assignees.
 
