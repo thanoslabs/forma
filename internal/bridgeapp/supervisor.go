@@ -13,6 +13,7 @@ import (
 type Coordinator interface {
 	StartNext(context.Context) (orchestration.Execution, error)
 	Heartbeat(context.Context, string) (orchestration.Execution, error)
+	ReconcileRuntime(context.Context, string) (orchestration.Execution, error)
 }
 type ActiveStore interface {
 	ListActive(context.Context) ([]orchestration.Execution, error)
@@ -76,6 +77,9 @@ func (s *Supervisor) heartbeatOnce(ctx context.Context) error {
 	}
 	var errs []error
 	for _, execution := range active {
+		if _, err := s.coordinator.ReconcileRuntime(ctx, execution.ID); err != nil {
+			errs = append(errs, err)
+		}
 		if _, err := s.coordinator.Heartbeat(ctx, execution.ID); err != nil {
 			errs = append(errs, err)
 		}
