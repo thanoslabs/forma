@@ -110,6 +110,20 @@ func (s *Store) ListActive(ctx context.Context) ([]orchestration.Execution, erro
 	return result, nil
 }
 
+func (s *Store) List(ctx context.Context) ([]orchestration.Execution, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	result := make([]orchestration.Execution, 0, len(s.state.Executions))
+	for _, execution := range s.state.Executions {
+		result = append(result, execution)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].CreatedAt.Before(result[j].CreatedAt) })
+	return result, nil
+}
+
 func (s *Store) EventsAfter(ctx context.Context, sequence uint64) ([]orchestration.Event, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
