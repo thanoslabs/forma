@@ -14,6 +14,7 @@ const (
 	EventRuntimeChanged   EventType = "runtime.changed"
 	EventHelperLinked     EventType = "helper.linked"
 	EventResultLinked     EventType = "result.linked"
+	EventOperatorCommand  EventType = "operator.command"
 )
 
 type Event struct {
@@ -34,7 +35,7 @@ func (e Event) Validate() error {
 		return errors.New("event requires IDs, sequence, timestamp and valid JSON payload")
 	}
 	switch e.Type {
-	case EventExecutionChanged, EventRuntimeChanged, EventHelperLinked, EventResultLinked:
+	case EventExecutionChanged, EventRuntimeChanged, EventHelperLinked, EventResultLinked, EventOperatorCommand:
 		return nil
 	default:
 		return fmt.Errorf("invalid event type %q", e.Type)

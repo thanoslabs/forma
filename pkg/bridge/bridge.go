@@ -226,3 +226,36 @@ func (c *Coordinator) ReconcileRuntime(ctx context.Context, executionID string) 
 	}
 	return execution, nil
 }
+
+func (c *Coordinator) ExecuteCommand(ctx context.Context, executionID, action string) (orchestration.Execution, error) {
+	execution, err := c.store.Get(ctx, executionID)
+	if err != nil {
+		return orchestration.Execution{}, err
+	}
+	if execution.Terminal() || execution.Claim == nil {
+		return execution, errors.New("execution has no active claim")
+	}
+	switch action {
+	case "release":
+		if err := c.work.Release(ctx, execution.Work, *execution.Claim, "released by operator"); err != nil {
+			return execution, err
+		}
+		execution.State = orchestration.StateReleased
+	case "approve":
+		reporter, ok := c.work.(WorkReporter)
+		if !ok {
+			return execution, errors.New("outcome reporting is unavailable")
+		}
+		if execution.State != orchestration.StateReview {
+			return execution, errors.New("only review-ready executions can be approved")
+		}
+		if err := reporter.Report(ctx, execution.Work, *execution.Claim, WorkUpdate{State: orchestration.StateCompleted, Message: "approved by operator", Progress: 100}); err != nil {
+			return execution, err
+		}
+		execution.State, execution.ReportedState = orchestration.StateCompleted, orchestration.StateCompleted
+	default:
+		return execution, fmt.Errorf("unsupported operator action %q", action)
+	}
+	execution.UpdatedAt = c.now()
+	return execution, c.store.Update(ctx, execution)
+}

@@ -100,3 +100,14 @@ func TestStartNextDoesNothingWhenNoWork(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 }
+
+func TestOperatorReleaseUpdatesExecutionAndProvider(t *testing.T) {
+	work, store := &fakeWork{}, &memoryStore{executions: map[string]orchestration.Execution{}}
+	now := time.Now().UTC()
+	store.executions["execution-1"] = orchestration.Execution{SchemaVersion: 1, ID: "execution-1", Attempt: 1, State: orchestration.StateRunning, Work: orchestration.WorkRef{ConnectionID: "overwatch", ProjectID: "project", ItemID: "item"}, Claim: &orchestration.ClaimRef{ID: "claim"}, Helpers: []orchestration.RuntimeRef{}, Results: []orchestration.ResultLink{}, CreatedAt: now, UpdatedAt: now}
+	coordinator, _ := New(work, fakeRuntime{}, store, func() string { return "unused" })
+	execution, err := coordinator.ExecuteCommand(context.Background(), "execution-1", "release")
+	if err != nil || execution.State != orchestration.StateReleased || !work.released {
+		t.Fatalf("execution=%#v released=%v err=%v", execution, work.released, err)
+	}
+}
