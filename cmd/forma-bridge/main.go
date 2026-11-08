@@ -46,6 +46,7 @@ func main() {
 	defer stop()
 	mux := http.NewServeMux()
 	bridgeapp.NewObservationAPI(store, config.ObserverToken).Register(mux)
+	bridgeapp.NewOperatorAPI(coordinator, config.OperatorToken, store).Register(mux)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))

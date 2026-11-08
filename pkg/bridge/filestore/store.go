@@ -139,6 +139,33 @@ func (s *Store) EventsAfter(ctx context.Context, sequence uint64) ([]orchestrati
 	return result, nil
 }
 
+func (s *Store) RecordOperatorCommand(ctx context.Context, executionID, action, idempotencyKey string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	payload, err := json.Marshal(map[string]string{"action": action, "idempotencyKey": idempotencyKey})
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.state.Executions[executionID]; !exists {
+		return ErrNotFound
+	}
+	next := cloneState(s.state)
+	next.Sequence++
+	event := orchestration.Event{SchemaVersion: orchestration.SchemaVersion, ID: fmt.Sprintf("%s:operator:%d", executionID, next.Sequence), ExecutionID: executionID, Type: orchestration.EventOperatorCommand, Sequence: next.Sequence, ObservedAt: time.Now().UTC(), Payload: payload}
+	if err := event.Validate(); err != nil {
+		return err
+	}
+	next.Events = append(next.Events, event)
+	if err := writeAtomic(s.path, next); err != nil {
+		return err
+	}
+	s.state = next
+	return nil
+}
+
 func (s *Store) change(execution orchestration.Execution) error {
 	payload, err := json.Marshal(execution)
 	if err != nil {

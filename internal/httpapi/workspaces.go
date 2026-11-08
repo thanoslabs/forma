@@ -43,6 +43,8 @@ type ProjectProjectionReader interface {
 type ExecutionProjectionReader interface {
 	ListExecutions(context.Context, string) ([]projections.Execution, error)
 	ListEvents(context.Context, string, string, string, uint64) (projections.ExecutionEvents, error)
+	OperatorCapabilities(context.Context, string, string) (projections.OperatorCapabilities, error)
+	ExecuteCommand(context.Context, string, string, string, string, string) (projections.Execution, error)
 }
 
 type API struct {
@@ -114,9 +116,59 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/projects", a.listProjects)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/executions", a.listExecutions)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/executions/{executionID}/events", a.listExecutionEvents)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/operator/capabilities", a.operatorCapabilities)
+	mux.HandleFunc("POST /api/v1/workspaces/{workspaceID}/connections/{connectionID}/executions/{executionID}/commands", a.executeCommand)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/projects/{projectID}/items", a.listWorkItems)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/world", a.getWorld)
 	mux.HandleFunc("PUT /api/v1/workspaces/{workspaceID}/world", a.putWorld)
+}
+
+func (a *API) operatorCapabilities(w http.ResponseWriter, r *http.Request) {
+	if a.executions == nil {
+		http.Error(w, "execution projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	result, err := a.executions.OperatorCapabilities(r.Context(), r.PathValue("workspaceID"), r.PathValue("connectionID"))
+	if errors.Is(err, workspaces.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "operator capability is unavailable", http.StatusBadGateway)
+		return
+	}
+	respond(w, result)
+}
+
+func (a *API) executeCommand(w http.ResponseWriter, r *http.Request) {
+	if a.executions == nil {
+		http.Error(w, "execution projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if key == "" || len(key) > 200 {
+		http.Error(w, "valid Idempotency-Key is required", http.StatusBadRequest)
+		return
+	}
+	var request struct {
+		Action string `json:"action"`
+	}
+	if !decodeJSON(w, r, &request) || (request.Action != "release" && request.Action != "approve") {
+		if request.Action != "" {
+			http.Error(w, "unsupported action", http.StatusBadRequest)
+		}
+		return
+	}
+	result, err := a.executions.ExecuteCommand(r.Context(), r.PathValue("workspaceID"), r.PathValue("connectionID"), r.PathValue("executionID"), request.Action, key)
+	if errors.Is(err, workspaces.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "operator command rejected", http.StatusConflict)
+		return
+	}
+	respond(w, result)
 }
 
 func (a *API) listExecutionEvents(w http.ResponseWriter, r *http.Request) {

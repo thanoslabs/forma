@@ -51,3 +51,9 @@ Every attempt has a stable execution ID and records the Overwatch work item and 
 - Forma downtime must not pause claims, heartbeats, agents or outcome reporting.
 - Read-only observations and privileged runtime controls use distinct capabilities.
 - Raw Herdr sockets, unrestricted shell access and unbounded terminal output are never exposed to Forma.
+
+## Bridge access boundaries
+
+The bridge requires `FORMA_BRIDGE_OBSERVER_TOKEN` for execution and event reads. Operator commands are disabled unless `FORMA_BRIDGE_OPERATOR_TOKEN` is configured, and the operator token must differ from the observer token. Forma stores both encrypted in the workspace connection, discovers the bridge's fixed action capabilities, and sends a unique idempotency key for every confirmed command.
+
+The initial command set is intentionally narrow: `release` relinquishes an active Overwatch claim, while `approve` can complete only an execution already in `needs_review`. The bridge rejects arbitrary command names, never accepts shell input, and appends an `operator.command` event to its durable audit feed for every accepted command.

@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	OverwatchURL, OverwatchToken, StatePath, ListenAddress string
-	ObserverToken                                          string
+	ObserverToken, OperatorToken                           string
 	OverwatchConnectionID, HerdrConnectionID, AgentName    string
 	HerdrBinary, HerdrMachine, WorkingDirectory            string
 	AgentCommand                                           []string
@@ -19,7 +19,7 @@ type Config struct {
 }
 
 func LoadConfig() (Config, error) {
-	c := Config{OverwatchURL: os.Getenv("FORMA_BRIDGE_OVERWATCH_URL"), OverwatchToken: os.Getenv("FORMA_BRIDGE_OVERWATCH_TOKEN"), ObserverToken: os.Getenv("FORMA_BRIDGE_OBSERVER_TOKEN"), StatePath: value("FORMA_BRIDGE_STATE_PATH", "./forma-bridge-state.json"), ListenAddress: value("FORMA_BRIDGE_LISTEN", "127.0.0.1:8091"), OverwatchConnectionID: value("FORMA_BRIDGE_OVERWATCH_CONNECTION_ID", "overwatch"), HerdrConnectionID: value("FORMA_BRIDGE_HERDR_CONNECTION_ID", "herdr"), AgentName: value("FORMA_BRIDGE_AGENT_NAME", "forma-bridge"), HerdrBinary: value("FORMA_BRIDGE_HERDR_BINARY", "hc"), HerdrMachine: os.Getenv("FORMA_BRIDGE_HERDR_MACHINE"), WorkingDirectory: os.Getenv("FORMA_BRIDGE_WORKING_DIRECTORY"), PollInterval: 15 * time.Second, HeartbeatInterval: 5 * time.Minute, LeaseSeconds: 900, MaxConcurrent: 1}
+	c := Config{OverwatchURL: os.Getenv("FORMA_BRIDGE_OVERWATCH_URL"), OverwatchToken: os.Getenv("FORMA_BRIDGE_OVERWATCH_TOKEN"), ObserverToken: os.Getenv("FORMA_BRIDGE_OBSERVER_TOKEN"), OperatorToken: os.Getenv("FORMA_BRIDGE_OPERATOR_TOKEN"), StatePath: value("FORMA_BRIDGE_STATE_PATH", "./forma-bridge-state.json"), ListenAddress: value("FORMA_BRIDGE_LISTEN", "127.0.0.1:8091"), OverwatchConnectionID: value("FORMA_BRIDGE_OVERWATCH_CONNECTION_ID", "overwatch"), HerdrConnectionID: value("FORMA_BRIDGE_HERDR_CONNECTION_ID", "herdr"), AgentName: value("FORMA_BRIDGE_AGENT_NAME", "forma-bridge"), HerdrBinary: value("FORMA_BRIDGE_HERDR_BINARY", "hc"), HerdrMachine: os.Getenv("FORMA_BRIDGE_HERDR_MACHINE"), WorkingDirectory: os.Getenv("FORMA_BRIDGE_WORKING_DIRECTORY"), PollInterval: 15 * time.Second, HeartbeatInterval: 5 * time.Minute, LeaseSeconds: 900, MaxConcurrent: 1}
 	if raw := os.Getenv("FORMA_BRIDGE_AGENT_COMMAND_JSON"); json.Unmarshal([]byte(raw), &c.AgentCommand) != nil || len(c.AgentCommand) == 0 {
 		return Config{}, errors.New("FORMA_BRIDGE_AGENT_COMMAND_JSON must be a non-empty JSON string array")
 	}
@@ -38,6 +38,9 @@ func LoadConfig() (Config, error) {
 	}
 	if c.OverwatchURL == "" || c.OverwatchToken == "" || c.ObserverToken == "" || c.MaxConcurrent < 1 {
 		return Config{}, errors.New("Overwatch URL/token and positive concurrency are required")
+	}
+	if c.OperatorToken != "" && c.OperatorToken == c.ObserverToken {
+		return Config{}, errors.New("operator and observer tokens must be different")
 	}
 	if c.HeartbeatInterval >= time.Duration(c.LeaseSeconds)*time.Second {
 		return Config{}, errors.New("heartbeat interval must be shorter than the lease")
