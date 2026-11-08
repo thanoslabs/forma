@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,6 +42,7 @@ type ProjectProjectionReader interface {
 
 type ExecutionProjectionReader interface {
 	ListExecutions(context.Context, string) ([]projections.Execution, error)
+	ListEvents(context.Context, string, string, string, uint64) (projections.ExecutionEvents, error)
 }
 
 type API struct {
@@ -111,9 +113,35 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/agents/{agentID}", a.getAgent)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/projects", a.listProjects)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/executions", a.listExecutions)
+	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/executions/{executionID}/events", a.listExecutionEvents)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/connections/{connectionID}/projects/{projectID}/items", a.listWorkItems)
 	mux.HandleFunc("GET /api/v1/workspaces/{workspaceID}/world", a.getWorld)
 	mux.HandleFunc("PUT /api/v1/workspaces/{workspaceID}/world", a.putWorld)
+}
+
+func (a *API) listExecutionEvents(w http.ResponseWriter, r *http.Request) {
+	if a.executions == nil {
+		http.Error(w, "execution projections are unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	after, err := strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)
+	if r.URL.Query().Get("after") == "" {
+		after, err = 0, nil
+	}
+	if err != nil {
+		http.Error(w, "after must be an unsigned integer", http.StatusBadRequest)
+		return
+	}
+	items, err := a.executions.ListEvents(r.Context(), r.PathValue("workspaceID"), r.PathValue("connectionID"), r.PathValue("executionID"), after)
+	if errors.Is(err, workspaces.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "unable to load execution events", http.StatusBadGateway)
+		return
+	}
+	respond(w, items)
 }
 
 func (a *API) listExecutions(w http.ResponseWriter, r *http.Request) {

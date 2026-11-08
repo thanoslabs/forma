@@ -46,3 +46,23 @@ func TestExecutionReaderRejectsInvalidBridgePayload(t *testing.T) {
 		t.Fatal("expected invalid bridge payload to fail")
 	}
 }
+
+func TestExecutionReaderFiltersValidatedEventsToSelectedExecution(t *testing.T) {
+	now := time.Now().UTC()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/events" || r.URL.Query().Get("after") != "4" {
+			t.Fatalf("unexpected request %s", r.URL.String())
+		}
+		events := []orchestration.Event{
+			{SchemaVersion: 1, ID: "event-5", ExecutionID: "execution-1", Type: orchestration.EventExecutionChanged, Sequence: 5, ObservedAt: now, Payload: json.RawMessage(`{"state":"running"}`)},
+			{SchemaVersion: 1, ID: "event-6", ExecutionID: "execution-2", Type: orchestration.EventRuntimeChanged, Sequence: 6, ObservedAt: now, Payload: json.RawMessage(`{}`)},
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"events": events, "next": 6})
+	}))
+	defer server.Close()
+	reader := NewExecutionReader(repository{connections: []workspaces.Connection{{ID: "bridge-1", WorkspaceID: "workspace-1", AdapterID: "forma-bridge", ProviderType: "orchestration", EndpointURL: server.URL, Credential: "secret"}}}, server.Client())
+	result, err := reader.ListEvents(context.Background(), "workspace-1", "bridge-1", "execution-1", 4)
+	if err != nil || result.Next != 6 || len(result.Events) != 1 || result.Events[0].ID != "event-5" {
+		t.Fatalf("result=%#v err=%v", result, err)
+	}
+}

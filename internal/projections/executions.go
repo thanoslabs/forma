@@ -21,9 +21,59 @@ type Execution struct {
 	orchestration.Execution
 }
 
+type ExecutionEvents struct {
+	Events []orchestration.Event `json:"events"`
+	Next   uint64                `json:"next"`
+}
+
 type ExecutionReader struct {
 	connections workspaces.Repository
 	client      *http.Client
+}
+
+func (r *ExecutionReader) ListEvents(ctx context.Context, workspaceID, connectionID, executionID string, after uint64) (ExecutionEvents, error) {
+	connection, err := r.connections.GetConnection(ctx, workspaceID, connectionID)
+	if err != nil {
+		return ExecutionEvents{}, err
+	}
+	if connection.ProviderType != "orchestration" || connection.AdapterID != bridgeAdapterID {
+		return ExecutionEvents{}, workspaces.ErrNotFound
+	}
+	endpoint, err := bridgeURL(connection.EndpointURL, "/api/v1/events")
+	if err != nil {
+		return ExecutionEvents{}, err
+	}
+	query := endpoint.Query()
+	query.Set("after", fmt.Sprintf("%d", after))
+	endpoint.RawQuery = query.Encode()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return ExecutionEvents{}, err
+	}
+	request.Header.Set("Authorization", "Bearer "+connection.Credential)
+	response, err := r.client.Do(request)
+	if err != nil {
+		return ExecutionEvents{}, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return ExecutionEvents{}, fmt.Errorf("observer returned %s", response.Status)
+	}
+	var payload ExecutionEvents
+	if err := json.NewDecoder(io.LimitReader(response.Body, 4<<20)).Decode(&payload); err != nil {
+		return ExecutionEvents{}, fmt.Errorf("decode observer response: %w", err)
+	}
+	filtered := make([]orchestration.Event, 0, len(payload.Events))
+	for _, event := range payload.Events {
+		if err := event.Validate(); err != nil {
+			return ExecutionEvents{}, fmt.Errorf("invalid event %s: %w", event.ID, err)
+		}
+		if event.ExecutionID == executionID {
+			filtered = append(filtered, event)
+		}
+	}
+	payload.Events = filtered
+	return payload, nil
 }
 
 func NewExecutionReader(connections workspaces.Repository, client *http.Client) *ExecutionReader {
@@ -62,11 +112,10 @@ func (r *ExecutionReader) listBridgeExecutions(ctx context.Context, connection w
 	if connection.AdapterID != bridgeAdapterID {
 		return nil, fmt.Errorf("orchestration adapter %s is unavailable", connection.AdapterID)
 	}
-	endpoint, err := url.Parse(strings.TrimSpace(connection.EndpointURL))
-	if err != nil || (endpoint.Scheme != "http" && endpoint.Scheme != "https") || endpoint.Host == "" {
-		return nil, fmt.Errorf("bridge endpoint must be an absolute HTTP URL")
+	endpoint, err := bridgeURL(connection.EndpointURL, "/api/v1/executions")
+	if err != nil {
+		return nil, err
 	}
-	endpoint.Path = strings.TrimRight(endpoint.Path, "/") + "/api/v1/executions"
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
 	if err != nil {
 		return nil, err
@@ -94,4 +143,13 @@ func (r *ExecutionReader) listBridgeExecutions(ctx context.Context, connection w
 		}
 	}
 	return payload.Executions, nil
+}
+
+func bridgeURL(base, path string) (*url.URL, error) {
+	endpoint, err := url.Parse(strings.TrimSpace(base))
+	if err != nil || (endpoint.Scheme != "http" && endpoint.Scheme != "https") || endpoint.Host == "" {
+		return nil, fmt.Errorf("bridge endpoint must be an absolute HTTP URL")
+	}
+	endpoint.Path = strings.TrimRight(endpoint.Path, "/") + path
+	return endpoint, nil
 }
